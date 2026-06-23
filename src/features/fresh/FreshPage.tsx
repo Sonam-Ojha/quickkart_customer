@@ -64,7 +64,7 @@ export default function FreshPage() {
             <button
               key={id}
               onClick={() => setActiveCat(id)}
-              className={`w-full px-2 py-3 text-left text-[10px] font-jakarta leading-tight border-b border-border transition-colors ${
+              className={`w-full px-2 py-3 text-left text-2xs font-jakarta leading-tight border-b border-border transition-colors ${
                 activeCat === id
                   ? 'bg-tealTint text-deepTeal font-semibold border-l-2 border-l-deepTeal'
                   : 'text-textSecondary'
@@ -102,21 +102,21 @@ function FreshProductCard({ product }: { product: typeof freshProducts[0] }) {
       {/* Image */}
       <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-inputFill mb-2">
         <img src={product.img} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-        <span className="absolute top-1 left-1 bg-deepTeal text-white text-[9px] font-inter font-bold px-1.5 py-0.5 rounded-full">
+        <span className="absolute top-1 left-1 bg-deepTeal text-white text-2xs font-inter font-bold px-1.5 py-0.5 rounded-full">
           8 mins
         </span>
       </div>
 
       {/* Name with Hindi */}
-      <p className="font-jakarta text-[11px] text-ink line-clamp-1 font-semibold">{product.name}</p>
-      <p className="font-jakarta text-[10px] text-muted">({product.hindi})</p>
-      <p className="font-jakarta text-[10px] text-muted mt-0.5">{product.weight}</p>
+      <p className="font-jakarta text-xs text-ink line-clamp-1 font-semibold">{product.name}</p>
+      <p className="font-jakarta text-2xs text-muted">({product.hindi})</p>
+      <p className="font-jakarta text-2xs text-muted mt-0.5">{product.weight}</p>
 
       {/* Price */}
       <div className="flex items-center gap-1 mt-1 mb-2">
         <span className="font-inter font-bold text-sm text-ink">₹{product.price}</span>
         {disc > 0 && (
-          <span className="font-inter text-[9px] text-success font-semibold">{disc}% off</span>
+          <span className="font-inter text-2xs text-success font-semibold">{disc}% off</span>
         )}
       </div>
 
@@ -124,15 +124,15 @@ function FreshProductCard({ product }: { product: typeof freshProducts[0] }) {
       {qty === 0 ? (
         <button
           onClick={() => add(product)}
-          className="w-full h-8 bg-primaryOrange text-white rounded-btn text-xs font-inter font-bold"
+          className="w-full h-8 bg-cardSurface border border-deepTeal text-deepTeal hover:bg-tealTint rounded-btn text-xs font-inter font-bold uppercase tracking-wide transition-colors"
         >
           ADD
         </button>
       ) : (
-        <div className="flex items-center justify-between bg-primaryOrange rounded-btn h-8 px-1.5">
-          <button onClick={() => decrement(product.id)} className="w-6 h-6 flex items-center justify-center text-white font-bold">−</button>
+        <div className="flex items-center justify-between bg-deepTeal rounded-btn h-8 px-1.5">
+          <button onClick={() => decrement(product.id)} className="w-6 h-6 flex items-center justify-center text-white font-bold hover:opacity-80 transition-opacity">−</button>
           <span className="font-inter font-bold text-white text-sm">{qty}</span>
-          <button onClick={() => increment(product.id)} className="w-6 h-6 flex items-center justify-center text-white font-bold">+</button>
+          <button onClick={() => increment(product.id)} className="w-6 h-6 flex items-center justify-center text-white font-bold hover:opacity-80 transition-opacity">+</button>
         </div>
       )}
     </div>

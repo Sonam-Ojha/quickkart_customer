@@ -26,7 +26,7 @@ export default function BottomNav() {
                   <span className={`relative flex items-center justify-center w-10 h-7 rounded-full transition-colors ${isActive ? 'bg-orangeTint' : ''}`}>
                     <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
                   </span>
-                  <span className={`text-[10px] font-inter font-medium leading-none ${isActive ? 'text-primaryOrange' : 'text-muted'}`}>
+                  <span className={`text-2xs font-inter font-medium leading-none ${isActive ? 'text-primaryOrange' : 'text-muted'}`}>
                     {label}
                   </span>
                 </>

@@ -24,21 +24,34 @@ export default function BannerCarousel({ banners, desktop }: Props) {
         {banners.map((b) => (
           <div
             key={b.id}
-            className={`relative min-w-full rounded-card overflow-hidden flex-shrink-0 ${desktop ? 'h-64' : 'h-40'}`}
+            className={`relative min-w-full rounded-card overflow-hidden flex-shrink-0 ${desktop ? 'h-56 lg:h-64' : 'h-40'}`}
             style={{ background: b.bgColor }}
           >
+            {/* Vivid image */}
             <img
               src={b.img}
               alt={b.title}
-              className="absolute inset-0 w-full h-full object-cover opacity-40"
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
-            <div className="absolute inset-0 p-5 flex flex-col justify-end">
-              <h3 className="font-inter font-bold text-ink text-xl leading-tight">{b.title}</h3>
+            {/* Left-to-right color gradient for text readability */}
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(90deg, ${b.bgColor} 8%, ${b.bgColor}E6 42%, ${b.bgColor}00 78%)` }}
+            />
+            {/* Text */}
+            <div className="relative h-full px-6 sm:px-8 lg:px-12 flex flex-col justify-center max-w-[68%] sm:max-w-[60%]">
+              <h3 className="font-inter font-black text-white text-xl sm:text-2xl lg:text-4xl leading-tight drop-shadow-sm">
+                {b.title}
+              </h3>
               {b.subtitle && (
-                <p className="font-jakarta text-xs text-textSecondary mt-0.5">{b.subtitle}</p>
+                <p className="font-jakarta text-white/90 text-xs sm:text-sm lg:text-base mt-1.5 lg:mt-2 leading-snug">
+                  {b.subtitle}
+                </p>
               )}
               {b.ctaText && (
-                <button className="mt-3 self-start bg-primaryOrange text-white text-xs font-inter font-bold px-4 py-2 rounded-btn">
+                <button className="mt-3 lg:mt-5 self-start bg-white text-ink text-xs sm:text-sm font-inter font-bold px-5 py-2.5 rounded-btn shadow-cta hover:bg-orangeTint transition-colors">
                   {b.ctaText}
                 </button>
               )}
@@ -53,8 +66,8 @@ export default function BannerCarousel({ banners, desktop }: Props) {
           <button
             key={i}
             onClick={() => setActive(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              i === active ? 'w-4 bg-primaryOrange' : 'w-1.5 bg-white/60'
+            className={`h-1.5 rounded-full transition-all duration-300 drop-shadow ${
+              i === active ? 'w-5 bg-white' : 'w-1.5 bg-white/60'
             }`}
           />
         ))}

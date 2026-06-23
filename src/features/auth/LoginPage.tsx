@@ -90,7 +90,7 @@ export default function LoginPage() {
           </p>
 
           {/* Mode toggle */}
-          <div className="flex bg-inputFill rounded-xl p-1 mb-8">
+          <div className="flex bg-inputFill rounded-btn p-1 mb-8">
             {(['login', 'register'] as Mode[]).map((m) => (
               <button
                 key={m}
@@ -118,7 +118,7 @@ export default function LoginPage() {
                   value={form.name}
                   onChange={set('name')}
                   required
-                  className="w-full h-12 bg-inputFill border border-border rounded-xl px-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  className="w-full h-12 bg-inputFill border border-border rounded-btn px-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
                 />
               </div>
             )}
@@ -139,7 +139,7 @@ export default function LoginPage() {
                   onChange={set('phone')}
                   required
                   maxLength={10}
-                  className="w-full h-12 bg-inputFill border border-border rounded-xl pl-16 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  className="w-full h-12 bg-inputFill border border-border rounded-btn pl-16 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
                 />
               </div>
             </div>
@@ -156,7 +156,7 @@ export default function LoginPage() {
                   value={form.password}
                   onChange={set('password')}
                   required
-                  className="w-full h-12 bg-inputFill border border-border rounded-xl pl-10 pr-12 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  className="w-full h-12 bg-inputFill border border-border rounded-btn pl-10 pr-12 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
                 />
                 <button
                   type="button"
@@ -179,7 +179,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+              className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-btn shadow-cta flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none mt-2"
             >
               {loading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -209,7 +209,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button className="w-full h-12 border border-border rounded-xl flex items-center justify-center gap-3 font-inter font-semibold text-sm text-ink hover:bg-inputFill hover:border-ink/20 transition-all">
+          <button className="w-full h-12 border border-border rounded-btn flex items-center justify-center gap-3 font-inter font-semibold text-sm text-ink hover:bg-inputFill hover:border-ink/20 transition-all">
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>

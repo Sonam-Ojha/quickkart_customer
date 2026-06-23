@@ -1,18 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Zap, Leaf, ShieldCheck, Truck } from 'lucide-react'
 import BannerCarousel from '@/components/ui/BannerCarousel'
 import ProductCard from '@/components/ui/ProductCard'
 import CountdownTimer from '@/components/ui/CountdownTimer'
+import PromoTile, { type PromoTileData } from '@/components/ui/PromoTile'
 import { banners } from '@/data/banners'
-import { homeCategories } from '@/data/categories'
 import { products, dealOfTheDay, bestSellers, freshDeals } from '@/data/products'
 
-const promoBanners = [
-  { title: 'Get printouts delivered',   sub: 'Safe, secure & fast',     emoji: '🖨️', color: 'bg-blue-50   border-blue-100',  btn: 'text-blue-700',  to: '/print'    },
-  { title: 'Pharmacy at your doorstep', sub: 'Medicines & more',        emoji: '💊', color: 'bg-green-50  border-green-100', btn: 'text-green-700', to: '/category' },
-  { title: 'Fresh daily produce',       sub: 'Farm-picked, delivered',  emoji: '🥬', color: 'bg-teal-50   border-teal-100',  btn: 'text-teal-700',  to: '/category' },
-  { title: 'No time for a diaper run?', sub: 'Baby care essentials',    emoji: '🍼', color: 'bg-pink-50   border-pink-100',  btn: 'text-pink-700',  to: '/category' },
+const PIMG = '?w=600&q=80&auto=format&fit=crop'
+
+const promoBanners: PromoTileData[] = [
+  { title: 'Get printouts delivered',   sub: 'Safe, secure & fast',    cta: 'Order Now', emoji: '🖨️', img: `https://images.unsplash.com/photo-1454165804606-c3d57bc86b40${PIMG}`, gradient: 'from-blue-50 to-indigo-50',   ring: 'ring-blue-100',    accent: 'text-blue-700',  to: '/print'    },
+  { title: 'Pharmacy at your doorstep', sub: 'Medicines & more',       cta: 'Order Now', emoji: '💊', img: `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae${PIMG}`, gradient: 'from-emerald-50 to-green-50', ring: 'ring-emerald-100', accent: 'text-emerald-700', to: '/category' },
+  { title: 'Fresh daily produce',       sub: 'Farm-picked, delivered', cta: 'Order Now', emoji: '🥬', img: `https://images.unsplash.com/photo-1542838132-92c53300491e${PIMG}`, gradient: 'from-teal-50 to-cyan-50',     ring: 'ring-teal-100',    accent: 'text-deepTeal',  to: '/category' },
+  { title: 'No time for a diaper run?', sub: 'Baby care essentials',   cta: 'Order Now', emoji: '🍼', img: `https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4${PIMG}`, gradient: 'from-rose-50 to-pink-50',     ring: 'ring-pink-100',    accent: 'text-rose-600',  to: '/category' },
 ]
 
 export default function HomePage() {
@@ -28,63 +29,15 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* ── Hero strip ── */}
-      <div className="bg-primaryOrange text-white">
-        <div className="max-w-screen-2xl mx-auto px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Zap size={16} className="text-accentYellow" />
-            <span className="font-inter font-bold text-sm">Delivery in 10 minutes</span>
-          </div>
-          <div className="hidden md:flex items-center gap-6 text-xs font-jakarta opacity-90">
-            <span className="flex items-center gap-1"><ShieldCheck size={13} /> Quality assured</span>
-            <span className="flex items-center gap-1"><Truck size={13} /> Free delivery above ₹99</span>
-            <span className="flex items-center gap-1"><Leaf size={13} /> 30,000+ products</span>
-          </div>
-        </div>
-      </div>
+      <div className="max-w-screen-2xl mx-auto px-12 sm:px-16 lg:px-24 py-8 space-y-12">
 
-      <div className="max-w-screen-2xl mx-auto px-8 py-8 space-y-12">
-
-        {/* ── Banner + Category grid ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Banner (3/4 width) */}
-          <div className="lg:col-span-3">
-            <BannerCarousel banners={banners} desktop />
-          </div>
-
-          {/* Category sidebar (1/4 width) */}
-          <div className="bg-cardSurface rounded-2xl border border-border p-4">
-            <h3 className="font-inter font-bold text-ink text-sm mb-3">Shop by Category</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {homeCategories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => navigate(`/category?tab=${cat.name}`)}
-                  className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-orangeTint transition-colors group"
-                >
-                  <span className="text-2xl">{cat.img}</span>
-                  <span className="font-jakarta text-xs text-textSecondary group-hover:text-primaryOrange text-center leading-tight">
-                    {cat.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* ── Banner ── */}
+        <BannerCarousel banners={banners} desktop />
 
         {/* ── Promo banners row ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {promoBanners.map((b) => (
-            <button
-              key={b.title}
-              onClick={() => navigate(b.to)}
-              className={`${b.color} border rounded-2xl p-4 text-left hover:scale-[1.02] transition-transform`}
-            >
-              <span className="text-3xl">{b.emoji}</span>
-              <p className="font-inter font-bold text-ink text-sm mt-2">{b.title}</p>
-              <p className="font-jakarta text-xs text-textSecondary mt-0.5">{b.sub}</p>
-              <p className={`${b.btn} text-xs font-inter font-semibold mt-3`}>Order Now →</p>
-            </button>
+            <PromoTile key={b.title} tile={b} onClick={() => navigate(b.to)} />
           ))}
         </div>
 
@@ -106,7 +59,7 @@ export default function HomePage() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {tabProducts.slice(0, 12).map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
@@ -124,7 +77,7 @@ export default function HomePage() {
               See all deals →
             </button>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {dealOfTheDay.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
@@ -139,7 +92,7 @@ export default function HomePage() {
               See all →
             </button>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {bestSellers.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
@@ -157,7 +110,7 @@ export default function HomePage() {
               See all fresh →
             </button>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {freshDeals.slice(0, 6).map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
@@ -172,7 +125,7 @@ export default function HomePage() {
           <div className="text-white">
             <p className="font-inter font-black text-3xl">QuickPrints</p>
             <p className="font-jakarta text-base opacity-80 mt-1">Documents printed & delivered in 25 minutes</p>
-            <button className="mt-4 bg-white text-primaryOrange font-inter font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-orangeTint transition-colors">
+            <button className="mt-4 bg-white text-primaryOrange font-inter font-bold text-sm px-6 py-2.5 rounded-btn shadow-cta hover:bg-orangeTint transition-colors">
               Upload & Print
             </button>
           </div>

@@ -56,10 +56,8 @@ const [selected, setSelected] = useState(params.get('tab') ?? '')
   })
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-8 py-8">
-
-
-<div className="flex gap-8">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex gap-8">
         {/* ── Left sidebar ── */}
         <aside className="hidden lg:block w-56 shrink-0">
           <div className="bg-cardSurface rounded-2xl border border-border p-4 sticky top-28">
@@ -167,7 +165,7 @@ const [selected, setSelected] = useState(params.get('tab') ?? '')
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {sorted.map((p) => (
                   <ProductCard key={p.id} product={p} />
                 ))}

@@ -35,7 +35,7 @@ export default function ProductCard({ product }: Props) {
   const bgColor = catColors[product.category ?? 'default'] ?? catColors.default
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col hover:shadow-md transition-shadow duration-200 overflow-hidden group">
+    <div className="bg-cardSurface rounded-card border border-border shadow-card flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden group">
 
       {/* Image */}
       <div
@@ -61,26 +61,26 @@ export default function ProductCard({ product }: Props) {
           }}
         />
         {product.badge && (
-          <span className={`absolute top-1.5 left-1.5 text-[9px] font-inter font-bold px-1.5 py-0.5 rounded-full ${badgeConfig[product.badge].bg}`}>
+          <span className={`absolute top-2 left-2 text-2xs font-inter font-bold px-2 py-0.5 rounded-full ${badgeConfig[product.badge].bg}`}>
             {badgeConfig[product.badge].label}
           </span>
         )}
         {disc > 0 && (
-          <span className="absolute top-1.5 right-1.5 bg-green-500 text-white text-[9px] font-inter font-bold px-1.5 py-0.5 rounded-full">
+          <span className="absolute top-2 right-2 bg-success text-white text-2xs font-inter font-bold px-2 py-0.5 rounded-full">
             {disc}% off
           </span>
         )}
       </div>
 
       {/* Content */}
-      <div className="flex flex-col gap-1.5 p-2 flex-1">
+      <div className="flex flex-col gap-1.5 p-3 flex-1">
 
         {/* Weight */}
-        <span className="text-gray-400 text-[10px] font-jakarta">{product.weight}</span>
+        <span className="text-muted text-2xs font-jakarta">{product.weight}</span>
 
         {/* Name */}
         <p
-          className="font-jakarta text-gray-800 text-[12px] leading-snug line-clamp-2 flex-1 cursor-pointer hover:text-primaryOrange transition-colors"
+          className="font-jakarta text-textSecondary text-sm leading-snug line-clamp-2 flex-1 cursor-pointer hover:text-primaryOrange transition-colors"
           onClick={() => navigate(`/product/${product.id}`)}
         >
           {product.name}
@@ -89,34 +89,33 @@ export default function ProductCard({ product }: Props) {
         {/* Price row + ADD button */}
         <div className="flex items-center justify-between gap-1 mt-0.5">
           <div className="flex flex-col">
-            <span className="font-inter font-bold text-gray-900 text-[13px] leading-none">₹{product.price}</span>
+            <span className="font-inter font-bold text-ink text-base leading-none">₹{product.price}</span>
             {disc > 0 && (
-              <span className="font-inter text-[10px] text-gray-400 line-through leading-none mt-0.5">₹{product.originalPrice}</span>
+              <span className="font-inter text-2xs text-muted line-through leading-none mt-0.5">₹{product.originalPrice}</span>
             )}
           </div>
 
           {qty === 0 ? (
             <button
               onClick={() => add(product)}
-              className="flex items-center gap-1 h-7 px-3 bg-primaryOrange hover:bg-[#c2410c] text-white rounded-lg font-inter font-bold text-[12px] transition-colors shrink-0"
+              className="h-9 px-4 bg-cardSurface border border-primaryOrange text-primaryOrange hover:bg-orangeTint rounded-btn font-inter font-bold text-xs uppercase tracking-wide transition-colors shrink-0"
             >
-              <Plus size={11} strokeWidth={3} />
               ADD
             </button>
           ) : (
-            <div className="flex items-center bg-primaryOrange rounded-lg h-7 shrink-0">
+            <div className="flex items-center bg-primaryOrange rounded-btn h-9 shrink-0">
               <button
                 onClick={() => decrement(product.id)}
-                className="w-6 h-7 flex items-center justify-center text-white hover:bg-[#c2410c] rounded-l-lg transition-colors"
+                className="w-8 h-9 flex items-center justify-center text-white hover:bg-orangeDark rounded-l-btn transition-colors"
               >
-                <Minus size={11} strokeWidth={3} />
+                <Minus size={13} strokeWidth={3} />
               </button>
-              <span className="font-inter font-bold text-white text-[12px] w-5 text-center">{qty}</span>
+              <span className="font-inter font-bold text-white text-sm w-6 text-center">{qty}</span>
               <button
                 onClick={() => increment(product.id)}
-                className="w-6 h-7 flex items-center justify-center text-white hover:bg-[#c2410c] rounded-r-lg transition-colors"
+                className="w-8 h-9 flex items-center justify-center text-white hover:bg-orangeDark rounded-r-btn transition-colors"
               >
-                <Plus size={11} strokeWidth={3} />
+                <Plus size={13} strokeWidth={3} />
               </button>
             </div>
           )}

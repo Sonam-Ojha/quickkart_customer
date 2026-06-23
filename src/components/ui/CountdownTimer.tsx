@@ -23,7 +23,7 @@ export default function CountdownTimer() {
   return (
     <div className="flex items-center gap-1.5 bg-errorBg px-2.5 py-1 rounded-full">
       <Clock size={11} className="text-error" />
-      <span className="font-inter font-bold text-error text-[11px]">
+      <span className="font-inter font-bold text-error text-xs">
         {pad(h)}:{pad(m)}:{pad(s)}
       </span>
     </div>

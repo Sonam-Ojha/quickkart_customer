@@ -44,7 +44,7 @@ export default function BuyAgainPage() {
           </p>
           <button
             onClick={() => navigate('/home')}
-            className="h-11 px-8 bg-primaryOrange text-white rounded-btn font-inter font-bold text-sm"
+            className="h-11 px-8 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold text-sm hover:bg-orangeDark transition-colors"
           >
             Start Shopping
           </button>
@@ -66,16 +66,16 @@ export default function BuyAgainPage() {
 
                 <div className="flex-1 min-w-0">
                   <p className="font-jakarta text-xs text-ink line-clamp-2 leading-snug">{item.name}</p>
-                  <p className="font-jakarta text-[10px] text-muted mt-0.5">{item.weight}</p>
-                  <p className="font-jakarta text-[10px] text-textSecondary mt-0.5">
+                  <p className="font-jakarta text-2xs text-muted mt-0.5">{item.weight}</p>
+                  <p className="font-jakarta text-2xs text-textSecondary mt-0.5">
                     Ordered {days === 0 ? 'today' : `${days} day${days > 1 ? 's' : ''} ago`}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className="font-inter font-bold text-sm text-ink">₹{item.price}</span>
                     {disc > 0 && (
                       <>
-                        <span className="font-inter text-[10px] text-muted line-through">₹{item.originalPrice}</span>
-                        <span className="font-inter text-[9px] text-success font-semibold">{disc}% off</span>
+                        <span className="font-inter text-2xs text-muted line-through">₹{item.originalPrice}</span>
+                        <span className="font-inter text-2xs text-success font-semibold">{disc}% off</span>
                       </>
                     )}
                   </div>

@@ -45,7 +45,7 @@ export default function PrintPage() {
 
   if (success) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-8 py-20 text-center">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <div className="max-w-sm mx-auto bg-cardSurface rounded-2xl border border-border p-10 shadow-card">
           <div className="w-20 h-20 bg-successBg rounded-full flex items-center justify-center mx-auto mb-5">
             <CheckCircle size={44} className="text-success" />
@@ -60,7 +60,7 @@ export default function PrintPage() {
           </div>
           <button
             onClick={() => { setFiles([]); setSuccess(false); setCopies(1) }}
-            className="w-full h-12 bg-primaryOrange text-white rounded-xl font-inter font-bold hover:bg-orangeDark transition-colors"
+            className="w-full h-12 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold hover:bg-orangeDark transition-colors"
           >
             Print More Documents
           </button>
@@ -73,7 +73,7 @@ export default function PrintPage() {
     <div>
       {/* Hero */}
       <div className="bg-gradient-to-r from-primaryOrange to-orangeDark text-white">
-        <div className="max-w-screen-2xl mx-auto px-8 py-14 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-14 flex items-center justify-between">
           <div>
             <div className="inline-flex items-center gap-2 bg-accentYellow/20 border border-accentYellow/40 rounded-full px-3 py-1 mb-4">
               <Clock size={13} className="text-accentYellow" />
@@ -81,7 +81,7 @@ export default function PrintPage() {
             </div>
             <h1 className="font-inter font-black text-5xl mb-3">QuickPrints</h1>
             <p className="font-jakarta text-lg opacity-80 mb-6">Print anything — delivered to your door</p>
-            <label className="inline-flex items-center gap-2 bg-white text-primaryOrange font-inter font-bold px-6 py-3 rounded-xl cursor-pointer hover:bg-orangeTint transition-colors">
+            <label className="inline-flex items-center gap-2 bg-white text-primaryOrange font-inter font-bold px-6 py-3 rounded-btn shadow-cta cursor-pointer hover:bg-orangeTint transition-colors">
               <Upload size={18} />
               Upload & Print
               <input type="file" className="hidden" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={handleFiles} />
@@ -91,7 +91,7 @@ export default function PrintPage() {
         </div>
       </div>
 
-      <div className="max-w-screen-2xl mx-auto px-8 py-12">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
           {/* ── Left: Upload + Config ── */}
@@ -207,11 +207,11 @@ export default function PrintPage() {
               <div>
                 <p className="font-inter font-semibold text-ink text-sm mb-3">Number of Copies</p>
                 <div className="flex items-center gap-4 w-40">
-                  <button onClick={() => setCopies((c) => Math.max(1, c - 1))} className="w-10 h-10 rounded-xl bg-inputFill flex items-center justify-center">
+                  <button onClick={() => setCopies((c) => Math.max(1, c - 1))} className="w-10 h-10 rounded-btn bg-inputFill flex items-center justify-center">
                     <Minus size={16} className="text-ink" />
                   </button>
                   <span className="font-inter font-bold text-xl text-ink flex-1 text-center">{copies}</span>
-                  <button onClick={() => setCopies((c) => c + 1)} className="w-10 h-10 rounded-xl bg-primaryOrange flex items-center justify-center">
+                  <button onClick={() => setCopies((c) => c + 1)} className="w-10 h-10 rounded-btn bg-primaryOrange flex items-center justify-center">
                     <Plus size={16} className="text-white" />
                   </button>
                 </div>
@@ -307,7 +307,7 @@ export default function PrintPage() {
                 <button
                   onClick={() => files.length > 0 && setSuccess(true)}
                   disabled={files.length === 0}
-                  className="w-full h-12 bg-primaryOrange text-white rounded-xl font-inter font-bold hover:bg-orangeDark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full h-12 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold hover:bg-orangeDark transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                 >
                   {files.length === 0 ? 'Upload files to continue' : `Order Printout · ₹${grandTotal}`}
                 </button>

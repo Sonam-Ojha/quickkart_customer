@@ -40,13 +40,13 @@ export default function CartPage() {
 
   if (itemList.length === 0 && !success) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-8 py-20 text-center">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <div className="w-28 h-28 rounded-full bg-orangeTint flex items-center justify-center mx-auto mb-6">
           <ShoppingBag size={52} className="text-primaryOrange" />
         </div>
         <h2 className="font-inter font-bold text-ink text-2xl mb-2">Your cart is empty</h2>
         <p className="font-jakarta text-textSecondary mb-8">Add items from the store to get started</p>
-        <Link to="/home" className="inline-block bg-primaryOrange text-white font-inter font-bold px-10 py-3 rounded-xl hover:bg-orangeDark transition-colors">
+        <Link to="/home" className="inline-block bg-primaryOrange text-white font-inter font-bold px-10 py-3 rounded-btn shadow-cta hover:bg-orangeDark transition-colors">
           Shop Now
         </Link>
 
@@ -63,7 +63,7 @@ export default function CartPage() {
 
   if (success) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-8 py-20 text-center">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <div className="max-w-sm mx-auto bg-cardSurface rounded-2xl border border-border p-10 shadow-card">
           <div className="w-20 h-20 bg-successBg rounded-full flex items-center justify-center mx-auto mb-5">
             <CheckCircle size={44} className="text-success" />
@@ -83,7 +83,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-8 py-8">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs font-jakarta text-textSecondary mb-6">
         <Link to="/home" className="hover:text-primaryOrange">Home</Link>
@@ -132,11 +132,11 @@ export default function CartPage() {
 
                 {/* Qty stepper */}
                 <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => decrement(item.id)} className="w-8 h-8 rounded-lg bg-orangeTint flex items-center justify-center">
+                  <button onClick={() => decrement(item.id)} className="w-8 h-8 rounded-btn bg-orangeTint flex items-center justify-center">
                     <Minus size={14} className="text-primaryOrange" />
                   </button>
                   <span className="font-inter font-bold text-ink w-6 text-center">{item.qty}</span>
-                  <button onClick={() => increment(item.id)} className="w-8 h-8 rounded-lg bg-primaryOrange flex items-center justify-center">
+                  <button onClick={() => increment(item.id)} className="w-8 h-8 rounded-btn bg-primaryOrange flex items-center justify-center">
                     <Plus size={14} className="text-white" />
                   </button>
                 </div>
@@ -251,10 +251,10 @@ export default function CartPage() {
             <div className="px-5 pb-5">
               <button
                 onClick={handleCheckout}
-                className="w-full h-12 bg-primaryOrange text-white rounded-xl font-inter font-bold text-base hover:bg-orangeDark transition-colors flex items-center justify-between px-5"
+                className="w-full h-12 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold text-base hover:bg-orangeDark transition-colors flex items-center justify-between px-5"
               >
                 <span>Proceed to Checkout</span>
-                <span className="bg-orangeDark/30 px-3 py-1 rounded-lg text-sm">₹{grandTotal.toFixed(0)}</span>
+                <span className="bg-orangeDark/30 px-3 py-1 rounded-btn text-sm">₹{grandTotal.toFixed(0)}</span>
               </button>
 
               {subtotal < FREE_DELIVERY && (

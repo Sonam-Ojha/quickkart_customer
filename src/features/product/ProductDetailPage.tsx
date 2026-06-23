@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ShieldCheck, Truck, RotateCcw } from 'lucide-react'
 import { products } from '@/data/products'
 import { useCartStore } from '@/store/cartStore'
+import ProductCard from '@/components/ui/ProductCard'
 
 export default function ProductDetailPage() {
   const { id }     = useParams()
@@ -14,7 +15,7 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-8 py-20 text-center">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <p className="font-inter text-textSecondary">Product not found.</p>
         <button onClick={() => navigate('/home')} className="mt-4 text-primaryOrange font-semibold text-sm">
           ← Back to Home
@@ -28,7 +29,7 @@ export default function ProductDetailPage() {
   const similar = products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4)
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-8 py-8">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-textSecondary font-jakarta text-sm mb-6 hover:text-ink transition-colors"
@@ -70,15 +71,15 @@ export default function ProductDetailPage() {
           {qty === 0 ? (
             <button
               onClick={() => add(product)}
-              className="w-full md:w-52 h-11 bg-primaryOrange hover:bg-[#c2410c] text-white rounded-xl font-inter font-bold text-[15px] flex items-center justify-center gap-2 transition-colors"
+              className="w-full md:w-52 h-11 bg-primaryOrange hover:bg-orangeDark text-white rounded-btn shadow-cta font-inter font-bold text-15 flex items-center justify-center gap-2 transition-colors"
             >
               + Add to Cart
             </button>
           ) : (
-            <div className="flex items-center w-full md:w-52 bg-primaryOrange rounded-xl h-11">
-              <button onClick={() => decrement(product.id)} className="w-11 h-11 flex items-center justify-center text-white text-xl font-bold hover:bg-[#c2410c] rounded-l-xl transition-colors">−</button>
+            <div className="flex items-center w-full md:w-52 bg-primaryOrange rounded-btn h-11">
+              <button onClick={() => decrement(product.id)} className="w-11 h-11 flex items-center justify-center text-white text-xl font-bold hover:bg-orangeDark rounded-l-btn transition-colors">−</button>
               <span className="font-inter font-bold text-white text-base flex-1 text-center">{qty}</span>
-              <button onClick={() => increment(product.id)} className="w-11 h-11 flex items-center justify-center text-white text-xl font-bold hover:bg-[#c2410c] rounded-r-xl transition-colors">+</button>
+              <button onClick={() => increment(product.id)} className="w-11 h-11 flex items-center justify-center text-white text-xl font-bold hover:bg-orangeDark rounded-r-btn transition-colors">+</button>
             </div>
           )}
 
@@ -89,9 +90,9 @@ export default function ProductDetailPage() {
               { Icon: ShieldCheck, label: 'Quality assured'  },
               { Icon: RotateCcw,   label: 'Easy returns'     },
             ].map(({ Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-1.5 p-3 bg-inputFill rounded-xl text-center">
+              <div key={label} className="flex flex-col items-center gap-1.5 p-3 bg-inputFill rounded-card text-center">
                 <Icon size={20} className="text-deepTeal" />
-                <span className="font-jakarta text-[11px] text-textSecondary leading-tight">{label}</span>
+                <span className="font-jakarta text-xs text-textSecondary leading-tight">{label}</span>
               </div>
             ))}
           </div>
@@ -102,39 +103,10 @@ export default function ProductDetailPage() {
       {similar.length > 0 && (
         <section className="mt-14">
           <h2 className="font-inter font-bold text-ink text-xl mb-5">Similar Products</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {similar.map((p) => {
-              const d   = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
-              const qty = items[p.id]?.qty ?? 0
-              return (
-                <div key={p.id} className="bg-cardSurface rounded-xl border border-border p-4 flex flex-col gap-3">
-                  <img
-                    src={p.img} alt={p.name}
-                    className="w-full aspect-square object-cover rounded-lg cursor-pointer"
-                    onClick={() => navigate(`/product/${p.id}`)}
-                  />
-                  <p className="font-jakarta text-sm text-ink line-clamp-2">{p.name}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="font-inter font-bold text-ink">₹{p.price}</span>
-                    {d > 0 && <span className="font-inter text-xs text-success">{d}% off</span>}
-                  </div>
-                  {qty === 0 ? (
-                    <button
-                      onClick={() => add(p)}
-                      className="flex items-center justify-center gap-1 w-full h-8 bg-primaryOrange hover:bg-[#c2410c] text-white rounded-lg text-[12px] font-inter font-bold transition-colors"
-                    >
-                      <span className="text-base leading-none">+</span> ADD
-                    </button>
-                  ) : (
-                    <div className="flex items-center bg-primaryOrange rounded-lg h-8">
-                      <button onClick={() => decrement(p.id)} className="w-8 h-8 flex items-center justify-center text-white font-bold hover:bg-[#c2410c] rounded-l-lg transition-colors">−</button>
-                      <span className="text-white font-inter font-bold text-sm flex-1 text-center">{qty}</span>
-                      <button onClick={() => increment(p.id)} className="w-8 h-8 flex items-center justify-center text-white font-bold hover:bg-[#c2410c] rounded-r-lg transition-colors">+</button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {similar.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
           </div>
         </section>
       )}

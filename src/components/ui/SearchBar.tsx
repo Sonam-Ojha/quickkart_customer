@@ -26,7 +26,7 @@ export default function SearchBar({ onFocus, placeholder }: Props) {
   return (
     <button
       onClick={onFocus}
-      className="w-full flex items-center gap-3 bg-white rounded-btn px-3 h-11 shadow-sm text-left"
+      className="w-full flex items-center gap-3 bg-white rounded-btn px-3 h-11 shadow-card text-left"
     >
       <Search size={17} className="text-muted shrink-0" />
       <span

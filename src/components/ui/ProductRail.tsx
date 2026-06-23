@@ -28,7 +28,7 @@ export default function ProductRail({ title, badge, products, onSeeAll }: Props)
       </div>
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
         {products.map((p) => (
-          <div key={p.id} className="w-36 shrink-0">
+          <div key={p.id} className="w-44 sm:w-48 shrink-0">
             <ProductCard product={p} />
           </div>
         ))}
