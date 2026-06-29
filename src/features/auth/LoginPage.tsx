@@ -1,25 +1,41 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Phone, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Truck, Zap } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Phone, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Truck, Zap, AlertCircle } from 'lucide-react'
+import api from '@/lib/api'
+import { useAuthStore } from '@/store/authStore'
 
 type Mode = 'login' | 'register'
 
 export default function LoginPage() {
   const navigate          = useNavigate()
+  const [searchParams]    = useSearchParams()
+  const redirectTo        = searchParams.get('redirect') ?? '/home'
+  const setAuth           = useAuthStore(s => s.setAuth)
   const [mode, setMode]   = useState<Mode>('login')
   const [showPwd, setShowPwd] = useState(false)
   const [form, setForm]   = useState({ name: '', phone: '', password: '' })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    setLoading(false)
-    navigate('/home')
+    setLoading(true); setError('')
+    try {
+      const endpoint = mode === 'login' ? '/auth/login' : '/auth/register'
+      const payload  = mode === 'login'
+        ? { phone: form.phone, password: form.password }
+        : { name: form.name, phone: form.phone, password: form.password }
+      const { data } = await api.post(endpoint, payload)
+      setAuth(data.user, data.token)
+      navigate(redirectTo)
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -107,6 +123,11 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600 font-jakarta">
+                <AlertCircle size={14} className="shrink-0" />{error}
+              </div>
+            )}
             {mode === 'register' && (
               <div>
                 <label className="font-inter font-semibold text-ink text-sm block mb-1.5">

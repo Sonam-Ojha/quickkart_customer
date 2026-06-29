@@ -1,38 +1,64 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Trash2, Plus, Minus, ShoppingBag, CheckCircle, ChevronRight, Tag } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, CheckCircle, ChevronRight, Tag, Loader2, Lock } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useOrderStore } from '@/store/orderStore'
+import { useSettings } from '@/hooks/useSettings'
+import { useProducts } from '@/hooks/useProducts'
+import { useAuthStore } from '@/store/authStore'
 import ProductCard from '@/components/ui/ProductCard'
-import { products } from '@/data/products'
-
-const DELIVERY_FEE    = 25
-const FREE_DELIVERY   = 99
-const HANDLING_CHARGE = 5
+import api from '@/lib/api'
 
 export default function CartPage() {
   const navigate      = useNavigate()
-  const [success, setSuccess]   = useState(false)
-  const [coupon, setCoupon]     = useState('')
-  const [couponApplied, setCouponApplied] = useState(false)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
+  const [success, setSuccess]         = useState(false)
+  const [coupon, setCoupon]           = useState('')
+  const [couponDiscount, setCouponDiscount] = useState(0)
+  const [couponMsg, setCouponMsg]     = useState('')
+  const [couponOk, setCouponOk]       = useState(false)
+  const [applying, setApplying]       = useState(false)
 
-  const items      = useCartStore((s) => s.items)
-  const increment  = useCartStore((s) => s.increment)
-  const decrement  = useCartStore((s) => s.decrement)
-  const removeLine = useCartStore((s) => s.removeLine)
-  const clear      = useCartStore((s) => s.clear)
-  const subtotal   = useCartStore((s) => s.subtotal())
-  const mrpTotal   = useCartStore((s) => s.mrpTotal())
-  const savings    = useCartStore((s) => s.savings())
-  const recordOrder = useOrderStore((s) => s.recordOrder)
+  const items       = useCartStore(s => s.items)
+  const increment   = useCartStore(s => s.increment)
+  const decrement   = useCartStore(s => s.decrement)
+  const removeLine  = useCartStore(s => s.removeLine)
+  const clear       = useCartStore(s => s.clear)
+  const subtotal    = useCartStore(s => s.subtotal())
+  const mrpTotal    = useCartStore(s => s.mrpTotal())
+  const savings     = useCartStore(s => s.savings())
+  const recordOrder = useOrderStore(s => s.recordOrder)
 
-  const couponDiscount  = couponApplied ? Math.round(subtotal * 0.1) : 0
-  const deliveryFee     = subtotal >= FREE_DELIVERY ? 0 : DELIVERY_FEE
-  const grandTotal      = subtotal - couponDiscount + deliveryFee + HANDLING_CHARGE
-  const itemList        = Object.values(items)
-  const suggested       = products.filter((p) => !items[p.id]).slice(0, 4)
+  const { data: settings } = useSettings()
+  const { data: suggestedData } = useProducts({ limit: 4 })
+
+  const deliveryFeeBase  = Number(settings?.delivery_fee  ?? 30)
+  const freeThreshold    = Number(settings?.free_delivery_threshold ?? 99)
+  const handlingCharge   = Number(settings?.handling_charge ?? 5)
+
+  const deliveryFee  = subtotal >= freeThreshold ? 0 : deliveryFeeBase
+  const grandTotal   = subtotal - couponDiscount + deliveryFee + handlingCharge
+  const itemList     = Object.values(items)
+  const suggested    = (suggestedData?.products ?? []).filter(p => !items[String(p.id)]).slice(0, 4)
+
+  const applyCoupon = async () => {
+    if (!coupon.trim()) return
+    setApplying(true); setCouponMsg(''); setCouponOk(false); setCouponDiscount(0)
+    try {
+      const { data } = await api.post('/coupons/validate', { code: coupon.trim(), subtotal })
+      setCouponDiscount(data.discount)
+      setCouponOk(true)
+      setCouponMsg(`✓ ${data.coupon.type === 'percent' ? `${data.coupon.value}%` : `₹${data.coupon.value}`} discount applied!`)
+    } catch (err: any) {
+      setCouponMsg(err?.response?.data?.message ?? 'Invalid coupon')
+    } finally { setApplying(false) }
+  }
 
   const handleCheckout = () => {
+    if (!isAuthenticated) {
+      navigate('/login?redirect=/cart')
+      return
+    }
     recordOrder(itemList, grandTotal)
     setSuccess(true)
     setTimeout(() => { clear(); navigate('/home') }, 3000)
@@ -49,14 +75,14 @@ export default function CartPage() {
         <Link to="/home" className="inline-block bg-primaryOrange text-white font-inter font-bold px-10 py-3 rounded-btn shadow-cta hover:bg-orangeDark transition-colors">
           Shop Now
         </Link>
-
-        {/* Suggested products */}
-        <div className="mt-16 text-left">
-          <h3 className="font-inter font-bold text-ink text-lg mb-5">You might like</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {suggested.map((p) => <ProductCard key={p.id} product={p} />)}
+        {suggested.length > 0 && (
+          <div className="mt-16 text-left">
+            <h3 className="font-inter font-bold text-ink text-lg mb-5">You might like</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {suggested.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     )
   }
@@ -84,7 +110,6 @@ export default function CartPage() {
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs font-jakarta text-textSecondary mb-6">
         <Link to="/home" className="hover:text-primaryOrange">Home</Link>
         <ChevronRight size={12} />
@@ -96,10 +121,7 @@ export default function CartPage() {
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-        {/* ── Cart items (left 2/3) ── */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Delivery banner */}
           <div className="bg-tealTint border border-teal-100 rounded-xl px-5 py-3 flex items-center gap-2">
             <span className="text-lg">⚡</span>
             <p className="font-inter font-semibold text-deepTeal text-sm">
@@ -107,21 +129,17 @@ export default function CartPage() {
             </p>
           </div>
 
-          {/* Items */}
           <div className="bg-cardSurface rounded-2xl border border-border overflow-hidden">
             {itemList.map((item, idx) => (
-              <div
-                key={item.id}
-                className={`flex items-center gap-4 px-6 py-4 ${idx < itemList.length - 1 ? 'border-b border-border' : ''}`}
-              >
-                <img
-                  src={item.img} alt={item.name}
+              <div key={item.id} className={`flex items-center gap-4 px-6 py-4 ${idx < itemList.length - 1 ? 'border-b border-border' : ''}`}>
+                <img src={item.img} alt={item.name}
                   className="w-20 h-20 rounded-xl object-cover bg-inputFill shrink-0 cursor-pointer"
                   onClick={() => navigate(`/product/${item.id}`)}
+                  onError={e => { e.currentTarget.src = 'https://picsum.photos/seed/product/200/200' }}
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-jakarta text-sm text-ink font-medium line-clamp-2">{item.name}</p>
-                  <p className="font-jakarta text-xs text-muted mt-0.5">{item.weight}</p>
+                  {item.weight && <p className="font-jakarta text-xs text-muted mt-0.5">{item.weight}</p>}
                   <div className="flex items-center gap-2 mt-1">
                     <span className="font-inter font-bold text-ink">₹{item.price}</span>
                     {item.originalPrice > item.price && (
@@ -129,8 +147,6 @@ export default function CartPage() {
                     )}
                   </div>
                 </div>
-
-                {/* Qty stepper */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={() => decrement(item.id)} className="w-8 h-8 rounded-btn bg-orangeTint flex items-center justify-center">
                     <Minus size={14} className="text-primaryOrange" />
@@ -140,11 +156,9 @@ export default function CartPage() {
                     <Plus size={14} className="text-white" />
                   </button>
                 </div>
-
                 <p className="font-inter font-bold text-ink text-sm w-16 text-right shrink-0">
                   ₹{(item.price * item.qty).toFixed(0)}
                 </p>
-
                 <button onClick={() => removeLine(item.id)} className="ml-2 text-muted hover:text-error transition-colors">
                   <Trash2 size={16} />
                 </button>
@@ -152,12 +166,10 @@ export default function CartPage() {
             ))}
           </div>
 
-          {/* Add more */}
           <Link to="/home" className="inline-flex items-center gap-2 text-primaryOrange font-inter font-semibold text-sm hover:underline">
             + Add more items
           </Link>
 
-          {/* Savings strip */}
           {savings > 0 && (
             <div className="bg-successBg border border-success/20 rounded-xl px-5 py-3 flex items-center gap-2">
               <span className="text-lg">🎉</span>
@@ -167,20 +179,17 @@ export default function CartPage() {
             </div>
           )}
 
-          {/* Suggested */}
           {suggested.length > 0 && (
             <div className="mt-6">
               <h3 className="font-inter font-bold text-ink text-base mb-4">Frequently bought together</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {suggested.map((p) => <ProductCard key={p.id} product={p} />)}
+                {suggested.map(p => <ProductCard key={p.id} product={p} />)}
               </div>
             </div>
           )}
         </div>
 
-        {/* ── Order summary (right 1/3) ── */}
         <div className="space-y-4">
-
           {/* Coupon */}
           <div className="bg-cardSurface rounded-2xl border border-border p-5">
             <h3 className="font-inter font-bold text-ink text-sm mb-3 flex items-center gap-2">
@@ -189,20 +198,23 @@ export default function CartPage() {
             <div className="flex gap-2">
               <input
                 value={coupon}
-                onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponMsg(''); setCouponOk(false); setCouponDiscount(0) }}
                 placeholder="Enter coupon code"
                 className="flex-1 bg-inputFill border border-border rounded-lg px-3 py-2 text-sm font-jakarta outline-none focus:border-primaryOrange"
+                onKeyDown={e => e.key === 'Enter' && applyCoupon()}
               />
               <button
-                onClick={() => { if (coupon) setCouponApplied(true) }}
-                className="px-4 py-2 bg-primaryOrange text-white rounded-lg font-inter font-bold text-sm hover:bg-orangeDark transition-colors"
+                onClick={applyCoupon}
+                disabled={applying || !coupon.trim()}
+                className="px-4 py-2 bg-primaryOrange text-white rounded-lg font-inter font-bold text-sm hover:bg-orangeDark transition-colors disabled:opacity-50 flex items-center gap-1"
               >
+                {applying && <Loader2 size={12} className="animate-spin" />}
                 Apply
               </button>
             </div>
-            {couponApplied && (
-              <p className="text-success font-jakarta text-xs mt-2 flex items-center gap-1">
-                <CheckCircle size={12} /> 10% discount applied!
+            {couponMsg && (
+              <p className={`font-jakarta text-xs mt-2 ${couponOk ? 'text-success' : 'text-error'}`}>
+                {couponMsg}
               </p>
             )}
           </div>
@@ -223,7 +235,7 @@ export default function CartPage() {
                   <span className="font-inter text-success font-semibold">−₹{savings.toFixed(0)}</span>
                 </div>
               )}
-              {couponApplied && (
+              {couponDiscount > 0 && (
                 <div className="flex justify-between">
                   <span className="font-jakarta text-textSecondary">Coupon discount</span>
                   <span className="font-inter text-success font-semibold">−₹{couponDiscount.toFixed(0)}</span>
@@ -232,7 +244,7 @@ export default function CartPage() {
               <div className="flex justify-between">
                 <span className="font-jakarta text-textSecondary">
                   Delivery fee
-                  {deliveryFee === 0 && <span className="ml-1 line-through text-muted text-xs">₹{DELIVERY_FEE}</span>}
+                  {deliveryFee === 0 && <span className="ml-1 line-through text-muted text-xs">₹{deliveryFeeBase}</span>}
                 </span>
                 <span className={`font-inter font-semibold ${deliveryFee === 0 ? 'text-success' : 'text-ink'}`}>
                   {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
@@ -240,26 +252,30 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between">
                 <span className="font-jakarta text-textSecondary">Handling charge</span>
-                <span className="font-inter text-ink">₹{HANDLING_CHARGE}</span>
+                <span className="font-inter text-ink">₹{handlingCharge}</span>
               </div>
             </div>
             <div className="px-5 py-4 border-t border-border flex justify-between">
               <span className="font-inter font-bold text-ink">To Pay</span>
               <span className="font-inter font-bold text-ink text-lg">₹{grandTotal.toFixed(0)}</span>
             </div>
-
             <div className="px-5 pb-5">
+              {!isAuthenticated && (
+                <div className="mb-3 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-jakarta text-amber-700">
+                  <Lock size={13} className="shrink-0" />
+                  Checkout ke liye login karein
+                </div>
+              )}
               <button
                 onClick={handleCheckout}
                 className="w-full h-12 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold text-base hover:bg-orangeDark transition-colors flex items-center justify-between px-5"
               >
-                <span>Proceed to Checkout</span>
+                <span>{isAuthenticated ? 'Proceed to Checkout' : 'Login to Checkout'}</span>
                 <span className="bg-orangeDark/30 px-3 py-1 rounded-btn text-sm">₹{grandTotal.toFixed(0)}</span>
               </button>
-
-              {subtotal < FREE_DELIVERY && (
+              {subtotal < freeThreshold && (
                 <p className="text-center font-jakarta text-xs text-textSecondary mt-3">
-                  Add ₹{(FREE_DELIVERY - subtotal).toFixed(0)} more for free delivery
+                  Add ₹{(freeThreshold - subtotal).toFixed(0)} more for free delivery
                 </p>
               )}
             </div>

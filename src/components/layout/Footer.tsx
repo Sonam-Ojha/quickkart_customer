@@ -1,8 +1,18 @@
 import { Link } from 'react-router-dom'
 import { MapPin, Phone, Mail } from 'lucide-react'
 import { footerLinks } from '@/data/infoPages'
+import { useSettings } from '@/hooks/useSettings'
 
 export default function Footer() {
+  const { data: s } = useSettings()
+
+  const tagline  = s?.footer_tagline  ?? 'Groceries, essentials & documents delivered in minutes.'
+  const phone    = s?.support_phone   ?? '1800-XXX-XXXX (Toll Free)'
+  const email    = s?.support_email   ?? 'help@quickkart.in'
+  const address  = s?.company_address ?? 'Noida, Uttar Pradesh'
+  const copy     = s?.copyright_text  ?? '© 2026 QuickKart Technologies Pvt. Ltd. All rights reserved.'
+  const badge    = s?.footer_badge    ?? '10-minute delivery · 30,000+ products'
+
   return (
     <footer className="bg-[#1C1917] text-white mt-16">
       <div className="max-w-screen-2xl mx-auto px-8 py-12">
@@ -14,18 +24,16 @@ export default function Footer() {
               <span className="font-inter font-black text-2xl text-primaryOrange">quick</span>
               <span className="font-inter font-black text-2xl text-white">kart</span>
             </Link>
-            <p className="font-jakarta text-sm text-white/55 leading-relaxed">
-              Groceries, essentials & documents delivered in minutes.
-            </p>
+            <p className="font-jakarta text-sm text-white/55 leading-relaxed">{tagline}</p>
             <div className="flex flex-col gap-2.5 mt-5">
-              <a href="tel:+911800000000" className="flex items-center gap-2 text-white/55 text-xs font-jakarta hover:text-white transition-colors">
-                <Phone size={13} /> 1800-XXX-XXXX (Toll Free)
+              <a href={`tel:${phone.replace(/\D/g, '')}`} className="flex items-center gap-2 text-white/55 text-xs font-jakarta hover:text-white transition-colors">
+                <Phone size={13} /> {phone}
               </a>
-              <a href="mailto:help@quickkart.in" className="flex items-center gap-2 text-white/55 text-xs font-jakarta hover:text-white transition-colors">
-                <Mail size={13} /> help@quickkart.in
+              <a href={`mailto:${email}`} className="flex items-center gap-2 text-white/55 text-xs font-jakarta hover:text-white transition-colors">
+                <Mail size={13} /> {email}
               </a>
               <span className="flex items-center gap-2 text-white/55 text-xs font-jakarta">
-                <MapPin size={13} /> Noida, Uttar Pradesh
+                <MapPin size={13} /> {address}
               </span>
             </div>
           </div>
@@ -74,8 +82,8 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="font-jakarta text-xs text-white/35">© 2026 QuickKart Technologies Pvt. Ltd. All rights reserved.</p>
-          <p className="font-jakarta text-xs text-white/35">10-minute delivery · 30,000+ products</p>
+          <p className="font-jakarta text-xs text-white/35">{copy}</p>
+          <p className="font-jakarta text-xs text-white/35">{badge}</p>
         </div>
       </div>
     </footer>
