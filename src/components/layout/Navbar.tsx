@@ -34,8 +34,8 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/home" className="shrink-0 leading-none">
             <span className="font-inter font-black text-3xl tracking-tight">
-              <span className="text-primaryOrange">quick</span>
-              <span className="text-deepTeal">kart</span>
+              <span className="text-primaryOrange">Jhat</span>
+              <span className="text-deepTeal">pats</span>
             </span>
           </Link>
 

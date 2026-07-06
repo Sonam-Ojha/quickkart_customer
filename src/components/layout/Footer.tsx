@@ -10,8 +10,8 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-1 mb-3">
-              <span className="font-inter font-black text-2xl text-primaryOrange">quick</span>
-              <span className="font-inter font-black text-2xl text-white">kart</span>
+              <span className="font-inter font-black text-2xl text-primaryOrange">Jhat</span>
+              <span className="font-inter font-black text-2xl text-white">pats</span>
             </div>
             <p className="font-jakarta text-sm text-white/60 leading-relaxed">
               Groceries, essentials & documents delivered in minutes.
@@ -20,8 +20,8 @@ export default function Footer() {
               <a href="tel:+91" className="flex items-center gap-2 text-white/60 text-xs font-jakarta hover:text-white transition-colors">
                 <Phone size={13} /> 1800-XXX-XXXX
               </a>
-              <a href="mailto:help@quickkart.in" className="flex items-center gap-2 text-white/60 text-xs font-jakarta hover:text-white transition-colors">
-                <Mail size={13} /> help@quickkart.in
+              <a href="mailto:help@jhatpats.in" className="flex items-center gap-2 text-white/60 text-xs font-jakarta hover:text-white transition-colors">
+                <Mail size={13} /> help@jhatpats.in
               </a>
               <span className="flex items-center gap-2 text-white/60 text-xs font-jakarta">
                 <MapPin size={13} /> Noida, Uttar Pradesh
@@ -67,7 +67,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="font-jakarta text-xs text-white/40">© 2026 QuickKart. All rights reserved.</p>
+          <p className="font-jakarta text-xs text-white/40">© 2026 Jhatpats. All rights reserved.</p>
           <p className="font-jakarta text-xs text-white/40">10-minute delivery · 30,000+ products</p>
         </div>
       </div>

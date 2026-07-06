@@ -33,8 +33,8 @@ export default function LoginPage() {
 
         {/* Logo */}
         <Link to="/home" className="relative z-10">
-          <span className="font-inter font-black text-4xl text-white">quick</span>
-          <span className="font-inter font-black text-4xl text-accentYellow">kart</span>
+          <span className="font-inter font-black text-4xl text-white">Jhat</span>
+          <span className="font-inter font-black text-4xl text-accentYellow">pats</span>
         </Link>
 
         {/* Center content */}
@@ -66,7 +66,7 @@ export default function LoginPage() {
         </div>
 
         <p className="font-jakarta text-white/40 text-xs relative z-10">
-          © 2026 QuickKart · 30,000+ products
+          © 2026 Jhatpats · 30,000+ products
         </p>
       </div>
 
@@ -76,8 +76,8 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <Link to="/home" className="flex lg:hidden mb-10">
-            <span className="font-inter font-black text-3xl text-primaryOrange">quick</span>
-            <span className="font-inter font-black text-3xl text-deepTeal">kart</span>
+            <span className="font-inter font-black text-3xl text-primaryOrange">Jhat</span>
+            <span className="font-inter font-black text-3xl text-deepTeal">pats</span>
           </Link>
 
           <h2 className="font-inter font-bold text-ink text-3xl mb-1">
@@ -85,7 +85,7 @@ export default function LoginPage() {
           </h2>
           <p className="font-jakarta text-textSecondary text-sm mb-8">
             {mode === 'login'
-              ? 'Login to your QuickKart account'
+              ? 'Login to your Jhatpats account'
               : 'Sign up to start ordering in minutes'}
           </p>
 
@@ -185,7 +185,7 @@ export default function LoginPage() {
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  {mode === 'login' ? 'Login to QuickKart' : 'Create Account'}
+                  {mode === 'login' ? 'Login to Jhatpats' : 'Create Account'}
                   <ArrowRight size={18} />
                 </>
               )}

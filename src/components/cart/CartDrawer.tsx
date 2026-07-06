@@ -379,7 +379,7 @@ export default function CartDrawer() {
         )}
       </aside>
 
-      {/* ── Phone-login modal (QuickKart branding) ── */}
+      {/* ── Phone-login modal (Jhatpats branding) ── */}
       {showAuth && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => setShowAuth(false)} />
@@ -398,8 +398,8 @@ export default function CartDrawer() {
                   <ShoppingBag size={30} className="text-white" />
                 </div>
                 <span className="font-inter font-black text-2xl tracking-tight">
-                  <span className="text-primaryOrange">quick</span>
-                  <span className="text-deepTeal">kart</span>
+                  <span className="text-primaryOrange">Jhat</span>
+                  <span className="text-deepTeal">pats</span>
                 </span>
                 {step === 'phone' ? (
                   <>
