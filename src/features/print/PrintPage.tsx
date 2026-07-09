@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Upload, Clock, Shield, Zap, X, Plus, Minus, CheckCircle, ChevronRight, FileText } from 'lucide-react'
+import { Upload, Clock, Shield, Zap, X, Plus, Minus, CheckCircle, ChevronRight, FileText, Loader2 } from 'lucide-react'
+import { useFaqs } from '@/hooks/useFaqs'
 
 type PrintColor = 'bw' | 'color'
 type PaperSize  = 'A4' | 'A3' | 'Letter'
@@ -9,15 +10,6 @@ interface UploadedFile { name: string; size: string; pages: number }
 
 const BW_RATE = 3, COLOR_RATE = 10, DELIVERY = 25
 
-const faqs = [
-  { q: 'How long does delivery take?',     a: 'Documents delivered within 25 minutes of order placement.' },
-  { q: 'What file formats are supported?', a: 'PDF, DOC, DOCX, JPG, PNG — up to 20 files per order.' },
-  { q: 'Is the first print really free?',  a: 'Yes! First order gets up to 10 B&W pages free.' },
-  { q: 'What are the printing costs?',     a: 'B&W: ₹3/page · Color: ₹10/page · Delivery: ₹25 flat.' },
-  { q: 'Can I get double-sided prints?',   a: 'Yes! Select "Double-sided" to save paper & cost (40% off).' },
-  { q: 'What paper sizes are available?',  a: 'A4, A3, and Letter size for all print jobs.' },
-]
-
 export default function PrintPage() {
   const [files,    setFiles]    = useState<UploadedFile[]>([])
   const [color,    setColor]    = useState<PrintColor>('bw')
@@ -26,6 +18,9 @@ export default function PrintPage() {
   const [copies,   setCopies]   = useState(1)
   const [openFaq,  setOpenFaq]  = useState<number | null>(null)
   const [success,  setSuccess]  = useState(false)
+
+  // Dynamic FAQs from backend (admin panel manages these)
+  const { data: faqs = [], isLoading: faqsLoading } = useFaqs('print')
 
   const totalPages  = files.reduce((a, f) => a + f.pages, 0)
   const rate        = color === 'bw' ? BW_RATE : COLOR_RATE
@@ -237,27 +232,37 @@ export default function PrintPage() {
               ))}
             </div>
 
-            {/* FAQs */}
+            {/* FAQs — dynamic from admin panel */}
             <section>
               <h2 className="font-inter font-bold text-ink text-xl mb-4">Frequently Asked Questions</h2>
-              <div className="space-y-2">
-                {faqs.map(({ q, a }, i) => (
-                  <div key={i} className="bg-cardSurface rounded-xl border border-border overflow-hidden">
-                    <button
-                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                      className="w-full px-5 py-4 flex items-center justify-between text-left"
-                    >
-                      <span className="font-inter font-semibold text-ink text-sm">{q}</span>
-                      <ChevronRight size={16} className={`text-muted transition-transform duration-200 ${openFaq === i ? 'rotate-90' : ''}`} />
-                    </button>
-                    {openFaq === i && (
-                      <div className="px-5 pb-4">
-                        <p className="font-jakarta text-sm text-textSecondary leading-relaxed">{a}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+
+              {faqsLoading ? (
+                <div className="flex items-center gap-2 text-muted py-6">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="font-jakarta text-sm">Loading FAQs...</span>
+                </div>
+              ) : faqs.length === 0 ? (
+                <p className="font-jakarta text-sm text-muted py-4">No FAQs available.</p>
+              ) : (
+                <div className="space-y-2">
+                  {faqs.map((faq, i) => (
+                    <div key={faq.id} className="bg-cardSurface rounded-xl border border-border overflow-hidden">
+                      <button
+                        onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                        className="w-full px-5 py-4 flex items-center justify-between text-left"
+                      >
+                        <span className="font-inter font-semibold text-ink text-sm">{faq.question}</span>
+                        <ChevronRight size={16} className={`text-muted transition-transform duration-200 shrink-0 ${openFaq === i ? 'rotate-90' : ''}`} />
+                      </button>
+                      {openFaq === i && (
+                        <div className="px-5 pb-4">
+                          <p className="font-jakarta text-sm text-textSecondary leading-relaxed">{faq.answer}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
 

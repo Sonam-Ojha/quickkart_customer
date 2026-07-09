@@ -7,6 +7,7 @@ import CartPage from '@/features/cart/CartPage'
 import PrintPage from '@/features/print/PrintPage'
 import SearchPage from '@/features/search/SearchPage'
 import LoginPage from '@/features/auth/LoginPage'
+import InfoPage from '@/features/info/InfoPage'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/search"      element={<SearchPage />} />
           <Route path="/print"       element={<PrintPage />} />
           <Route path="/cart"        element={<CartPage />} />
+          <Route path="/info/:slug"  element={<InfoPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

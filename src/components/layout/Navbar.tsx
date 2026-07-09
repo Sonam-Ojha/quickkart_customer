@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { MapPin, Search, ShoppingCart, ChevronDown, User, X } from 'lucide-react'
+import { MapPin, Search, ShoppingCart, ChevronDown, User, X, LogOut } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
+import { useAuthStore } from '@/store/authStore'
 
 
 export default function Navbar() {
@@ -11,8 +12,11 @@ export default function Navbar() {
   const count     = useCartStore((s) => s.count())
   const subtotal  = useCartStore((s) => s.subtotal())
   const openCart  = useCartUi((s) => s.open)
+  const user      = useAuthStore((s) => s.user)
+  const logout    = useAuthStore((s) => s.logout)
   const [q, setQ] = useState('')
   const [focused, setFocused] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const inputRef  = useRef<HTMLInputElement>(null)
 
   const handleSearch = (e: React.FormEvent) => {
@@ -94,14 +98,43 @@ export default function Navbar() {
           {/* Actions */}
           <div className="flex items-center gap-3 shrink-0">
 
-            {/* Login */}
-            <Link
-              to="/login"
-              className="hidden lg:flex items-center gap-2 h-10 px-5 rounded-btn border border-border font-inter font-semibold text-sm text-textSecondary hover:border-primaryOrange hover:text-primaryOrange transition-all whitespace-nowrap"
-            >
-              <User size={16} />
-              Login
-            </Link>
+            {/* Login / Profile */}
+            {user ? (
+              <div className="hidden lg:block relative">
+                <button
+                  onClick={() => setProfileOpen(p => !p)}
+                  className="flex items-center gap-2 h-10 px-4 rounded-btn border border-border font-inter font-semibold text-sm text-ink hover:border-primaryOrange transition-all"
+                >
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primaryOrange to-deepTeal flex items-center justify-center text-white text-xs font-bold">
+                    {user.name?.[0]?.toUpperCase() ?? 'U'}
+                  </div>
+                  <span className="max-w-[100px] truncate">{user.name}</span>
+                  <ChevronDown size={12} className="text-muted" />
+                </button>
+                {profileOpen && (
+                  <div className="absolute right-0 top-12 bg-white rounded-xl border border-border shadow-card w-48 py-1 z-50">
+                    <div className="px-4 py-2 border-b border-border">
+                      <p className="font-inter font-semibold text-sm text-ink truncate">{user.name}</p>
+                      <p className="font-jakarta text-xs text-muted">{user.phone}</p>
+                    </div>
+                    <button
+                      onClick={() => { logout(); setProfileOpen(false) }}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-jakarta text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut size={14} /> Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="hidden lg:flex items-center gap-2 h-10 px-5 rounded-btn border border-border font-inter font-semibold text-sm text-textSecondary hover:border-primaryOrange hover:text-primaryOrange transition-all whitespace-nowrap"
+              >
+                <User size={16} />
+                Login
+              </Link>
+            )}
 
             {/* Cart */}
             <button

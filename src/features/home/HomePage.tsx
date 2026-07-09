@@ -4,118 +4,193 @@ import BannerCarousel from '@/components/ui/BannerCarousel'
 import ProductCard from '@/components/ui/ProductCard'
 import CountdownTimer from '@/components/ui/CountdownTimer'
 import PromoTile, { type PromoTileData } from '@/components/ui/PromoTile'
-import { banners } from '@/data/banners'
-import { products, dealOfTheDay, bestSellers, freshDeals } from '@/data/products'
+import { useCategories } from '@/hooks/useCategories'
+import { useBanners } from '@/hooks/useBanners'
+import { useProducts } from '@/hooks/useProducts'
 
-const PIMG = '?w=600&q=80&auto=format&fit=crop'
+const BG_THEME: Record<string, Pick<PromoTileData, 'gradient' | 'ring' | 'accent'>> = {
+  'orange-tint':  { gradient: 'from-orange-50 to-amber-50',   ring: 'ring-orange-100',  accent: 'text-orange-600'  },
+  'teal-tint':    { gradient: 'from-teal-50 to-cyan-50',      ring: 'ring-teal-100',    accent: 'text-teal-700'    },
+  'blue-tint':    { gradient: 'from-blue-50 to-indigo-50',    ring: 'ring-blue-100',    accent: 'text-blue-700'    },
+  'emerald-tint': { gradient: 'from-emerald-50 to-green-50',  ring: 'ring-emerald-100', accent: 'text-emerald-700' },
+  'rose-tint':    { gradient: 'from-rose-50 to-pink-50',      ring: 'ring-pink-100',    accent: 'text-rose-600'    },
+  'purple-tint':  { gradient: 'from-purple-50 to-violet-50',  ring: 'ring-purple-100',  accent: 'text-purple-600'  },
+}
+const DEFAULT_THEME = BG_THEME['orange-tint']
 
-const promoBanners: PromoTileData[] = [
-  { title: 'Get printouts delivered',   sub: 'Safe, secure & fast',    cta: 'Order Now', emoji: '🖨️', img: `https://images.unsplash.com/photo-1454165804606-c3d57bc86b40${PIMG}`, gradient: 'from-blue-50 to-indigo-50',   ring: 'ring-blue-100',    accent: 'text-blue-700',  to: '/print'    },
-  { title: 'Pharmacy at your doorstep', sub: 'Medicines & more',       cta: 'Order Now', emoji: '💊', img: `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae${PIMG}`, gradient: 'from-emerald-50 to-green-50', ring: 'ring-emerald-100', accent: 'text-emerald-700', to: '/category' },
-  { title: 'Fresh daily produce',       sub: 'Farm-picked, delivered', cta: 'Order Now', emoji: '🥬', img: `https://images.unsplash.com/photo-1542838132-92c53300491e${PIMG}`, gradient: 'from-teal-50 to-cyan-50',     ring: 'ring-teal-100',    accent: 'text-deepTeal',  to: '/category' },
-  { title: 'No time for a diaper run?', sub: 'Baby care essentials',   cta: 'Order Now', emoji: '🍼', img: `https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4${PIMG}`, gradient: 'from-rose-50 to-pink-50',     ring: 'ring-pink-100',    accent: 'text-rose-600',  to: '/category' },
-]
+// Skeleton row for product grids
+function ProductSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-xl bg-gray-100 animate-pulse" style={{ height: 200 }} />
+      ))}
+    </div>
+  )
+}
 
 export default function HomePage() {
   const navigate    = useNavigate()
-  const [activeTab, setActiveTab] = useState('All')
+  const [activeTab, setActiveTab] = useState<string>('All')
 
-  const tabs = ['All', 'Fresh', 'Dairy', 'Snacks', 'Bakery', 'Beverages', 'Beauty', 'Staples']
+  const { data: heroBanners = [], isLoading: bannersLoading } = useBanners('hero')
+  const { data: promoRaw   = [], isLoading: promosLoading  } = useBanners('promo')
+  const { data: categories = [], isLoading: catsLoading    } = useCategories()
 
-  const tabProducts = activeTab === 'All'
-    ? products
-    : products.filter((p) => p.category?.toLowerCase() === activeTab.toLowerCase() ||
-        p.category?.toLowerCase().includes(activeTab.toLowerCase()))
+  const promoTiles: PromoTileData[] = promoRaw.map(b => ({
+    title: b.title,
+    sub:   b.subtitle ?? '',
+    cta:   'Order Now',
+    emoji: b.emoji ?? '🛒',
+    img:   b.img,
+    to:    b.ctaLink ?? '/home',
+    ...(BG_THEME[b.bgType] ?? DEFAULT_THEME),
+  }))
+
+  // Products — All tab (filtered by active category)
+  const activeCat = categories.find(c => c.name === activeTab)
+  const { data: allData, isLoading: allLoading } = useProducts(
+    activeTab === 'All' ? { limit: 12 } : { category_id: activeCat?.id, limit: 12 }
+  )
+
+  // Homepage sections
+  const { data: dealData,  isLoading: dealLoading  } = useProducts({ tag: 'deal',       limit: 6 })
+  const { data: bestData,  isLoading: bestLoading  } = useProducts({ tag: 'bestseller', limit: 6 })
+  const { data: freshData, isLoading: freshLoading } = useProducts({ category_name: 'Fresh', limit: 6 })
+
+  const allProducts   = allData?.products   ?? []
+  const dealProducts  = dealData?.products  ?? []
+  const bestProducts  = bestData?.products  ?? []
+  const freshProducts = freshData?.products ?? []
 
   return (
     <div>
       <div className="max-w-screen-2xl mx-auto px-12 sm:px-16 lg:px-24 py-8 space-y-12">
 
-        {/* ── Banner ── */}
-        <BannerCarousel banners={banners} desktop />
+        {/* ── Hero carousel — dynamic from admin panel ── */}
+        {bannersLoading ? (
+          <div className="w-full h-56 lg:h-64 rounded-card bg-gray-100 animate-pulse" />
+        ) : heroBanners.length > 0 ? (
+          <BannerCarousel banners={heroBanners} desktop />
+        ) : null}
 
-        {/* ── Promo banners row ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {promoBanners.map((b) => (
-            <PromoTile key={b.title} tile={b} onClick={() => navigate(b.to)} />
-          ))}
-        </div>
+        {/* ── Promo tile row — dynamic from admin panel ── */}
+        {promosLoading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-44 rounded-2xl bg-gray-100 animate-pulse" />
+            ))}
+          </div>
+        ) : promoTiles.length > 0 ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {promoTiles.map((b) => (
+              <PromoTile key={b.title} tile={b} onClick={() => navigate(b.to)} />
+            ))}
+          </div>
+        ) : null}
 
-        {/* ── Department tabs + grid ── */}
+        {/* ── Department tabs + product grid ── */}
         <section>
           <div className="flex items-center gap-0 border-b border-border mb-6 overflow-x-auto no-scrollbar">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`relative shrink-0 px-5 py-3 font-inter font-semibold text-sm whitespace-nowrap transition-colors ${
-                  activeTab === tab ? 'text-primaryOrange' : 'text-textSecondary hover:text-ink'
-                }`}
-              >
-                {tab}
-                {activeTab === tab && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primaryOrange rounded-full" />
-                )}
-              </button>
-            ))}
+            <button
+              onClick={() => setActiveTab('All')}
+              className={`relative shrink-0 px-5 py-3 font-inter font-semibold text-sm whitespace-nowrap transition-colors ${
+                activeTab === 'All' ? 'text-primaryOrange' : 'text-textSecondary hover:text-ink'
+              }`}
+            >
+              All
+              {activeTab === 'All' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primaryOrange rounded-full" />}
+            </button>
+            {catsLoading
+              ? Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="shrink-0 mx-3 h-4 w-16 bg-gray-100 rounded animate-pulse" />
+                ))
+              : categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveTab(cat.name)}
+                    className={`relative shrink-0 px-5 py-3 font-inter font-semibold text-sm whitespace-nowrap transition-colors ${
+                      activeTab === cat.name ? 'text-primaryOrange' : 'text-textSecondary hover:text-ink'
+                    }`}
+                  >
+                    {cat.name}
+                    {activeTab === cat.name && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primaryOrange rounded-full" />}
+                  </button>
+                ))
+            }
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {tabProducts.slice(0, 12).map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
+          {allLoading
+            ? <ProductSkeleton count={12} />
+            : allProducts.length > 0
+            ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {allProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+              </div>
+            ) : (
+              <p className="text-center text-textSecondary py-10 font-jakarta text-sm">No products found.</p>
+            )
+          }
         </section>
 
         {/* ── Deal of the Day ── */}
-        <section>
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <h2 className="font-inter font-bold text-ink text-xl">Deal of the Day</h2>
-              <CountdownTimer />
+        {(dealLoading || dealProducts.length > 0) && (
+          <section>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <h2 className="font-inter font-bold text-ink text-xl">Deal of the Day</h2>
+                <CountdownTimer />
+              </div>
+              <button className="font-inter text-sm text-primaryOrange font-semibold hover:underline">
+                See all deals →
+              </button>
             </div>
-            <button className="font-inter text-sm text-primaryOrange font-semibold hover:underline">
-              See all deals →
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {dealOfTheDay.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
+            {dealLoading
+              ? <ProductSkeleton count={6} />
+              : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {dealProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+                </div>
+            }
+          </section>
+        )}
 
         {/* ── Best Sellers ── */}
-        <section>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="font-inter font-bold text-ink text-xl">Best Sellers</h2>
-            <button className="font-inter text-sm text-primaryOrange font-semibold hover:underline">
-              See all →
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {bestSellers.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
+        {(bestLoading || bestProducts.length > 0) && (
+          <section>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-inter font-bold text-ink text-xl">Best Sellers</h2>
+              <button className="font-inter text-sm text-primaryOrange font-semibold hover:underline">
+                See all →
+              </button>
+            </div>
+            {bestLoading
+              ? <ProductSkeleton count={6} />
+              : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {bestProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+                </div>
+            }
+          </section>
+        )}
 
         {/* ── Fresh Deals ── */}
-        <section>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="font-inter font-bold text-ink text-xl">🥬 Fresh Deals</h2>
-            <button
-              onClick={() => navigate('/category?tab=Fresh')}
-              className="font-inter text-sm text-primaryOrange font-semibold hover:underline"
-            >
-              See all fresh →
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {freshDeals.slice(0, 6).map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
+        {(freshLoading || freshProducts.length > 0) && (
+          <section>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-inter font-bold text-ink text-xl">🥬 Fresh Deals</h2>
+              <button
+                onClick={() => navigate('/category?tab=Fresh')}
+                className="font-inter text-sm text-primaryOrange font-semibold hover:underline"
+              >
+                See all fresh →
+              </button>
+            </div>
+            {freshLoading
+              ? <ProductSkeleton count={6} />
+              : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {freshProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+                </div>
+            }
+          </section>
+        )}
 
         {/* ── QuickPrints CTA ── */}
         <div
@@ -131,6 +206,7 @@ export default function HomePage() {
           </div>
           <span className="text-7xl hidden md:block">🖨️</span>
         </div>
+
       </div>
     </div>
   )
