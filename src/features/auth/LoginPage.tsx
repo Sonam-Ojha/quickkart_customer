@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Phone, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Truck, Zap, AlertCircle } from 'lucide-react'
+import { Phone, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Truck, Zap, AlertCircle } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 
@@ -13,7 +13,7 @@ export default function LoginPage() {
   const setAuth           = useAuthStore(s => s.setAuth)
   const [mode, setMode]   = useState<Mode>('login')
   const [showPwd, setShowPwd] = useState(false)
-  const [form, setForm]   = useState({ name: '', phone: '', password: '' })
+  const [form, setForm]   = useState({ name: '', identifier: '', mobile: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -26,8 +26,8 @@ export default function LoginPage() {
     try {
       const endpoint = mode === 'login' ? '/auth/login' : '/auth/register'
       const payload  = mode === 'login'
-        ? { phone: form.phone, password: form.password }
-        : { name: form.name, phone: form.phone, password: form.password }
+        ? { identifier: form.identifier, password: form.password }
+        : { name: form.name, mobile: form.mobile, password: form.password }
       const { data } = await api.post(endpoint, payload)
       setAuth(data.user, data.token)
       navigate(redirectTo)
@@ -144,26 +144,48 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div>
-              <label className="font-inter font-semibold text-ink text-sm block mb-1.5">
-                Phone Number
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-jakarta text-sm text-textSecondary flex items-center gap-2">
-                  <Phone size={15} className="text-muted" />
-                  +91
-                </span>
-                <input
-                  type="tel"
-                  placeholder="98765 43210"
-                  value={form.phone}
-                  onChange={set('phone')}
-                  required
-                  maxLength={10}
-                  className="w-full h-12 bg-inputFill border border-border rounded-btn pl-16 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
-                />
+            {/* Login: identifier = mobile OR email */}
+            {mode === 'login' ? (
+              <div>
+                <label className="font-inter font-semibold text-ink text-sm block mb-1.5">
+                  Mobile Number or Email
+                </label>
+                <div className="relative">
+                  {/^[^\s@]+@[^\s@]+/.test(form.identifier)
+                    ? <Mail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                    : <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                  }
+                  <input
+                    type="text"
+                    placeholder="98765 43210 or you@email.com"
+                    value={form.identifier}
+                    onChange={set('identifier')}
+                    required
+                    autoComplete="username"
+                    className="w-full h-12 bg-inputFill border border-border rounded-btn pl-10 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Register: mobile field */
+              <div>
+                <label className="font-inter font-semibold text-ink text-sm block mb-1.5">
+                  Mobile Number
+                </label>
+                <div className="relative">
+                  <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                  <input
+                    type="tel"
+                    placeholder="98765 43210"
+                    value={form.mobile}
+                    onChange={set('mobile')}
+                    required
+                    maxLength={10}
+                    className="w-full h-12 bg-inputFill border border-border rounded-btn pl-10 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="font-inter font-semibold text-ink text-sm block mb-1.5">
