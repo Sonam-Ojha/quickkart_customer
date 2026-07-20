@@ -8,7 +8,7 @@ export interface Category {
   parentId: number | null
   icon: string | null
   sortOrder: number
-  image_url: string | null
+  imageUrl: string | null
   is_active: boolean
 }
 

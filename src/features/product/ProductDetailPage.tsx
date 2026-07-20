@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Tag } from 'lucide-react'
+import { Loader2, Tag } from 'lucide-react'
+import Breadcrumb from '@/components/ui/Breadcrumb'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useCartStore } from '@/store/cartStore'
@@ -63,13 +64,12 @@ export default function ProductDetailPage() {
   return (
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-      {/* Back */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-textSecondary font-jakarta text-sm mb-6 hover:text-ink transition-colors"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      {/* Breadcrumb */}
+      <Breadcrumb items={[
+        { label: 'Categories', href: '/category' },
+        ...(product.category ? [{ label: product.category }] : []),
+        { label: product.name },
+      ]} />
 
       {/* ── Main Grid: Image | Right Panel ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-8 xl:gap-14 items-start">

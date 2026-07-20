@@ -21,6 +21,29 @@ const catColors: Record<string, string> = {
   Staples:   '#F0FDF4', default:   '#F5F5F4',
 }
 
+const catEmoji: Record<string, string> = {
+  'Atta': '🌾', 'Besan': '🟡', 'Maida': '⚪', 'Rice': '🍚',
+  'Sooji & Rava': '🥣', 'Dals & Pulses': '🫘',
+  'Milk': '🥛', 'Paneer': '🧀', 'Curd & Yogurt': '🫙',
+  'Butter & Cream': '🧈', 'Eggs': '🥚', 'Cheese': '🧀',
+  'Fresh Fruits': '🍎', 'Fresh Vegetables': '🥦',
+  'Leafy Greens': '🥬', 'Exotic Veggies': '🫑',
+  'Chips & Crisps': '🥔', 'Biscuits': '🍪', 'Namkeen': '🫘',
+  'Chocolates': '🍫', 'Dry Fruits': '🥜',
+  'Cold Drinks': '🥤', 'Juices': '🧃', 'Tea & Coffee': '☕',
+  'Energy Drinks': '⚡', 'Water & Soda': '💧',
+  'Shampoo & Hair Care': '🧴', 'Soap & Bodywash': '🧼',
+  'Oral Care': '🦷', 'Skin Care': '✨', 'Feminine Care': '🌸',
+  'Detergents': '🫧', 'Dishwash': '🍽️', 'Toilet Cleaners': '🚽',
+  'Fresheners & Repel': '🌿', 'Noodles & Pasta': '🍜',
+  'Ready to Eat': '🍱', 'Frozen Snacks': '❄️', 'Soups': '🥣',
+  'Whole Spices': '🌶️', 'Blended Masala': '🫙',
+  'Salt & Sugar': '🧂', 'Condiments': '🍯',
+  'Baby Food': '🍼', 'Diapers & Wipes': '🧷', 'Baby Skin Care': '🧴',
+  'Breads & Buns': '🍞', 'Cakes & Muffins': '🧁', 'Rusk & Toast': '🍞',
+  'Cooking Oils': '🫙', 'Ghee': '🧈', 'Mustard Oil': '🌻',
+}
+
 export default function ProductCard({ product }: Props) {
   const navigate  = useNavigate()
   const items     = useCartStore((s) => s.items)
@@ -43,23 +66,21 @@ export default function ProductCard({ product }: Props) {
         style={{ background: bgColor }}
         onClick={() => navigate(`/product/${product.id}`)}
       >
-        <img
-          src={product.img}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-          onError={(e) => {
-            const t = e.currentTarget
-            t.style.display = 'none'
-            const p = t.parentElement
-            if (p && !p.querySelector('.fb')) {
-              const d = document.createElement('div')
-              d.className = 'fb text-4xl flex items-center justify-center w-full h-full'
-              d.textContent = '🛒'
-              p.appendChild(d)
-            }
-          }}
-        />
+        {product.img ? (
+          <img
+            src={product.img}
+            alt={product.name}
+            className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-5xl leading-none select-none">
+              {catEmoji[product.category ?? ''] ?? '🛍️'}
+            </span>
+          </div>
+        )}
         {product.badge && (
           <span className={`absolute top-2 left-2 text-2xs font-inter font-bold px-2 py-0.5 rounded-full ${badgeConfig[product.badge].bg}`}>
             {badgeConfig[product.badge].label}

@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, SlidersHorizontal, ChevronRight, Package } from 'lucide-react'
+import { SlidersHorizontal, ChevronRight, Package } from 'lucide-react'
 import ProductCard from '@/components/ui/ProductCard'
+import Breadcrumb from '@/components/ui/Breadcrumb'
 import { useCategories, useCategoryDetail, useSubCategoryProducts } from '@/hooks/useCategories'
 import type { Product } from '@/types/product'
 
@@ -90,8 +91,8 @@ function RootGrid() {
           >
             {/* Icon */}
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${iconBg}`}>
-              {cat.image_url
-                ? <img src={cat.image_url} alt={cat.name} className="w-10 h-10 object-cover rounded-lg" />
+              {cat.imageUrl
+                ? <img src={cat.imageUrl} alt={cat.name} className="w-10 h-10 object-cover rounded-lg" />
                 : cat.icon || '🛒'
               }
             </div>
@@ -120,12 +121,25 @@ function RootGrid() {
 
 // ── Category Detail (with subcategory sidebar) ────────────────────────────────
 function CategoryDetail({ categoryId }: { categoryId: number }) {
-  const navigate   = useNavigate()
-  const [activeSubId, setActiveSubId] = useState<number | null>(null)  // null = All
+  const navigate = useNavigate()
+  // null = not yet initialized (waiting for data), will default to first sub
+  const [activeSubId, setActiveSubId] = useState<number | null>(null)
+  const [initialized, setInitialized] = useState(false)
   const [sort, setSort] = useState('Relevance')
 
   const { data: detail, isLoading: detailLoading } = useCategoryDetail(categoryId)
   const { data: subData, isLoading: subLoading }   = useSubCategoryProducts(activeSubId)
+
+  const subcategories = detail?.subcategories ?? []
+  const category      = detail?.category
+
+  // Auto-select first subcategory once data loads
+  useEffect(() => {
+    if (!initialized && subcategories.length > 0) {
+      setActiveSubId(subcategories[0].id)
+      setInitialized(true)
+    }
+  }, [subcategories, initialized])
 
   const isLoading = activeSubId ? subLoading : detailLoading
 
@@ -135,60 +149,52 @@ function CategoryDetail({ categoryId }: { categoryId: number }) {
 
   const products = useMemo(() => sortProducts(rawProducts, sort), [rawProducts, sort])
 
-  const subcategories = detail?.subcategories ?? []
-  const category      = detail?.category
+  const activeSub = subcategories.find(s => s.id === activeSubId)
 
   return (
     <div>
-      {/* ── Breadcrumb / Back ── */}
-      <button
-        onClick={() => navigate('/category')}
-        className="flex items-center gap-2 text-textSecondary font-jakarta text-sm mb-6 hover:text-primaryOrange transition-colors"
-      >
-        <ArrowLeft size={16} />
-        All Categories
-      </button>
+      {/* ── Breadcrumb ── */}
+      <Breadcrumb items={[
+        { label: 'Categories', href: '/category' },
+        { label: category?.name ?? '…', href: `/category/${categoryId}` },
+        ...(activeSub ? [{ label: activeSub.name }] : []),
+      ]} />
 
-      <div className="flex gap-8 items-start">
+      <div className="flex gap-6 items-start">
 
         {/* ── Sidebar: Subcategories ── */}
         {subcategories.length > 0 && (
-          <aside className="hidden lg:block w-52 shrink-0 sticky top-28">
-            <div className="bg-white rounded-2xl border border-border p-4">
-              <p className="font-inter font-bold text-ink text-sm mb-3 px-2">
-                {category?.icon} {category?.name}
-              </p>
-
-              {/* All option */}
-              <button
-                onClick={() => setActiveSubId(null)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-jakarta mb-1 transition-colors ${
-                  !activeSubId
-                    ? 'bg-orangeTint text-primaryOrange font-semibold'
-                    : 'text-textSecondary hover:bg-inputFill'
-                }`}
-              >
-                <span>All</span>
-                {!activeSubId && <div className="w-1.5 h-1.5 rounded-full bg-primaryOrange" />}
-              </button>
-
-              <div className="h-px bg-border my-2" />
-
+          <aside className="hidden lg:block w-56 shrink-0 sticky top-28">
+            <div className="bg-white rounded-2xl border border-border overflow-hidden">
+              {/* Header */}
+              <div className="px-4 py-3 bg-slate-50 border-b border-border">
+                <p className="font-inter font-bold text-ink text-sm">
+                  {category?.icon} {category?.name}
+                </p>
+              </div>
               {/* Subcategories */}
-              {subcategories.map(sub => (
-                <button
-                  key={sub.id}
-                  onClick={() => setActiveSubId(sub.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-jakarta mb-0.5 transition-colors ${
-                    activeSubId === sub.id
-                      ? 'bg-orangeTint text-primaryOrange font-semibold'
-                      : 'text-textSecondary hover:bg-inputFill'
-                  }`}
-                >
-                  <span className="text-left leading-snug">{sub.icon ? `${sub.icon} ` : ''}{sub.name}</span>
-                  {activeSubId === sub.id && <div className="w-1.5 h-1.5 rounded-full bg-primaryOrange shrink-0" />}
-                </button>
-              ))}
+              <div className="p-2">
+                {subcategories.map(sub => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setActiveSubId(sub.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-jakarta mb-0.5 transition-all text-left ${
+                      activeSubId === sub.id
+                        ? 'bg-orangeTint text-primaryOrange font-semibold'
+                        : 'text-textSecondary hover:bg-inputFill'
+                    }`}
+                  >
+                    {sub.imageUrl
+                      ? <img src={sub.imageUrl} alt={sub.name} className="w-7 h-7 rounded-lg object-cover shrink-0" />
+                      : sub.icon
+                        ? <span className="w-7 h-7 flex items-center justify-center text-base bg-slate-100 rounded-lg shrink-0">{sub.icon}</span>
+                        : <span className="w-7 h-7 rounded-lg bg-slate-100 shrink-0" />
+                    }
+                    <span className="leading-snug flex-1">{sub.name}</span>
+                    {activeSubId === sub.id && <div className="w-1.5 h-1.5 rounded-full bg-primaryOrange shrink-0" />}
+                  </button>
+                ))}
+              </div>
             </div>
           </aside>
         )}
@@ -225,16 +231,6 @@ function CategoryDetail({ categoryId }: { categoryId: number }) {
           {/* Mobile: subcategory chips */}
           {subcategories.length > 0 && (
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 lg:hidden mb-5">
-              <button
-                onClick={() => setActiveSubId(null)}
-                className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-inter font-semibold border transition-colors ${
-                  !activeSubId
-                    ? 'bg-primaryOrange text-white border-primaryOrange'
-                    : 'border-border text-textSecondary bg-white'
-                }`}
-              >
-                All
-              </button>
               {subcategories.map(sub => (
                 <button
                   key={sub.id}
@@ -282,6 +278,7 @@ export default function CategoryPage() {
         <CategoryDetail categoryId={categoryId} />
       ) : (
         <>
+          <Breadcrumb items={[{ label: 'Categories' }]} />
           <div className="mb-8">
             <h1 className="font-inter font-bold text-ink text-3xl">Categories</h1>
             <p className="font-jakarta text-textSecondary text-sm mt-1">
