@@ -2,6 +2,7 @@ import { Plus, Minus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCartStore } from '@/store/cartStore'
 import type { Product } from '@/types/product'
+import ProductImage from './ProductImage'
 
 interface Props {
   product: Product
@@ -21,28 +22,6 @@ const catColors: Record<string, string> = {
   Staples:   '#F0FDF4', default:   '#F5F5F4',
 }
 
-const catEmoji: Record<string, string> = {
-  'Atta': '🌾', 'Besan': '🟡', 'Maida': '⚪', 'Rice': '🍚',
-  'Sooji & Rava': '🥣', 'Dals & Pulses': '🫘',
-  'Milk': '🥛', 'Paneer': '🧀', 'Curd & Yogurt': '🫙',
-  'Butter & Cream': '🧈', 'Eggs': '🥚', 'Cheese': '🧀',
-  'Fresh Fruits': '🍎', 'Fresh Vegetables': '🥦',
-  'Leafy Greens': '🥬', 'Exotic Veggies': '🫑',
-  'Chips & Crisps': '🥔', 'Biscuits': '🍪', 'Namkeen': '🫘',
-  'Chocolates': '🍫', 'Dry Fruits': '🥜',
-  'Cold Drinks': '🥤', 'Juices': '🧃', 'Tea & Coffee': '☕',
-  'Energy Drinks': '⚡', 'Water & Soda': '💧',
-  'Shampoo & Hair Care': '🧴', 'Soap & Bodywash': '🧼',
-  'Oral Care': '🦷', 'Skin Care': '✨', 'Feminine Care': '🌸',
-  'Detergents': '🫧', 'Dishwash': '🍽️', 'Toilet Cleaners': '🚽',
-  'Fresheners & Repel': '🌿', 'Noodles & Pasta': '🍜',
-  'Ready to Eat': '🍱', 'Frozen Snacks': '❄️', 'Soups': '🥣',
-  'Whole Spices': '🌶️', 'Blended Masala': '🫙',
-  'Salt & Sugar': '🧂', 'Condiments': '🍯',
-  'Baby Food': '🍼', 'Diapers & Wipes': '🧷', 'Baby Skin Care': '🧴',
-  'Breads & Buns': '🍞', 'Cakes & Muffins': '🧁', 'Rusk & Toast': '🍞',
-  'Cooking Oils': '🫙', 'Ghee': '🧈', 'Mustard Oil': '🌻',
-}
 
 export default function ProductCard({ product }: Props) {
   const navigate  = useNavigate()
@@ -61,26 +40,16 @@ export default function ProductCard({ product }: Props) {
     <div className="bg-cardSurface rounded-card border border-border shadow-card flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden group">
 
       {/* Image */}
-      <div
-        className="relative w-full aspect-square overflow-hidden cursor-pointer"
-        style={{ background: bgColor }}
-        onClick={() => navigate(`/product/${product.id}`)}
-      >
-        {product.img ? (
-          <img
-            src={product.img}
-            alt={product.name}
-            className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-            onError={(e) => { e.currentTarget.style.display = 'none' }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-5xl leading-none select-none">
-              {catEmoji[product.category ?? ''] ?? '🛍️'}
-            </span>
-          </div>
-        )}
+      <div className="relative w-full aspect-square overflow-hidden cursor-pointer group-hover:scale-105 transition-transform duration-300">
+        <ProductImage
+          src={product.img}
+          alt={product.name}
+          category={product.category}
+          className="w-full h-full"
+          imgClassName="object-contain p-3"
+          emojiSize="text-5xl"
+          onClick={() => navigate(`/product/${product.id}`)}
+        />
         {product.badge && (
           <span className={`absolute top-2 left-2 text-2xs font-inter font-bold px-2 py-0.5 rounded-full ${badgeConfig[product.badge].bg}`}>
             {badgeConfig[product.badge].label}

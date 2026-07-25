@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
+import ProductImage from '@/components/ui/ProductImage'
 import { useOrderStore } from '@/store/orderStore'
 import { useAuthStore } from '@/store/authStore'
 
@@ -257,10 +258,13 @@ export default function CartDrawer() {
                     key={item.id}
                     className={`flex items-center gap-3 px-4 py-3 ${idx < itemList.length - 1 ? 'border-b border-border' : ''}`}
                   >
-                    <img
+                    <ProductImage
                       src={item.img}
                       alt={item.name}
-                      className="w-12 h-12 rounded-btn object-cover bg-inputFill shrink-0"
+                      category={item.category}
+                      className="w-12 h-12 rounded-btn shrink-0"
+                      imgClassName="object-contain p-1"
+                      emojiSize="text-2xl"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-jakarta text-sm text-ink line-clamp-2 leading-snug">{item.name}</p>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import SearchBar from '@/components/ui/SearchBar'
 import { useOrderStore } from '@/store/orderStore'
 import { useCartStore } from '@/store/cartStore'
+import ProductImage from '@/components/ui/ProductImage'
 
 export default function BuyAgainPage() {
   const navigate    = useNavigate()
@@ -60,9 +61,14 @@ export default function BuyAgainPage() {
 
             return (
               <div key={item.id} className="bg-cardSurface rounded-card border border-border p-3 flex gap-3 items-center">
-                <div className="w-16 h-16 rounded-lg bg-inputFill shrink-0 overflow-hidden">
-                  <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
-                </div>
+                <ProductImage
+                  src={item.img}
+                  alt={item.name}
+                  category={item.category}
+                  className="w-16 h-16 rounded-lg shrink-0"
+                  imgClassName="object-contain p-1"
+                  emojiSize="text-2xl"
+                />
 
                 <div className="flex-1 min-w-0">
                   <p className="font-jakarta text-xs text-ink line-clamp-2 leading-snug">{item.name}</p>

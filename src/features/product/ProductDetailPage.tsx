@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2, Tag } from 'lucide-react'
 import Breadcrumb from '@/components/ui/Breadcrumb'
+import ProductImage from '@/components/ui/ProductImage'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useCartStore } from '@/store/cartStore'
@@ -76,12 +77,14 @@ export default function ProductDetailPage() {
 
         {/* ── Left: Product Image ── */}
         <div className="sticky top-24">
-          <div className="bg-white rounded-3xl border border-border p-8 aspect-square flex items-center justify-center shadow-sm">
-            <img
+          <div className="bg-white rounded-3xl border border-border p-8 aspect-square flex items-center justify-center shadow-sm overflow-hidden">
+            <ProductImage
               src={product.img}
               alt={product.name}
-              className="w-4/5 h-4/5 object-contain drop-shadow-md"
-              onError={e => { e.currentTarget.src = 'https://picsum.photos/seed/product/400/400' }}
+              category={product.category}
+              className="w-full h-full rounded-2xl"
+              imgClassName="object-contain p-4 drop-shadow-md"
+              emojiSize="text-8xl"
             />
           </div>
         </div>

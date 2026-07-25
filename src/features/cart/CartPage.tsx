@@ -7,6 +7,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { useProducts } from '@/hooks/useProducts'
 import { useAuthStore } from '@/store/authStore'
 import ProductCard from '@/components/ui/ProductCard'
+import ProductImage from '@/components/ui/ProductImage'
 import api from '@/lib/api'
 
 export default function CartPage() {
@@ -132,10 +133,14 @@ export default function CartPage() {
           <div className="bg-cardSurface rounded-2xl border border-border overflow-hidden">
             {itemList.map((item, idx) => (
               <div key={item.id} className={`flex items-center gap-4 px-6 py-4 ${idx < itemList.length - 1 ? 'border-b border-border' : ''}`}>
-                <img src={item.img} alt={item.name}
-                  className="w-20 h-20 rounded-xl object-cover bg-inputFill shrink-0 cursor-pointer"
+                <ProductImage
+                  src={item.img}
+                  alt={item.name}
+                  category={item.category}
+                  className="w-20 h-20 rounded-xl shrink-0 cursor-pointer"
+                  imgClassName="object-contain p-1"
+                  emojiSize="text-3xl"
                   onClick={() => navigate(`/product/${item.id}`)}
-                  onError={e => { e.currentTarget.src = 'https://picsum.photos/seed/product/200/200' }}
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-jakarta text-sm text-ink font-medium line-clamp-2">{item.name}</p>
