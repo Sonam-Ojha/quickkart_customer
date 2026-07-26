@@ -4,6 +4,7 @@ import { MapPin, Search, ShoppingCart, ChevronDown, User, X, LogOut } from 'luci
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
 import { useAuthStore } from '@/store/authStore'
+import { useLocationStore } from '@/store/locationStore'
 
 
 export default function Navbar() {
@@ -14,6 +15,9 @@ export default function Navbar() {
   const openCart  = useCartUi((s) => s.open)
   const user      = useAuthStore((s) => s.user)
   const logout    = useAuthStore((s) => s.logout)
+  const address     = useLocationStore((s) => s.address)
+  const subLabel    = useLocationStore((s) => s.subLabel)
+  const openLocation = useLocationStore((s) => s.open)
   const [q, setQ] = useState('')
   const [focused, setFocused] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -47,17 +51,22 @@ export default function Navbar() {
           <div className="h-9 w-px bg-border shrink-0 hidden lg:block" />
 
           {/* Location */}
-          <button className="hidden lg:flex items-center gap-2.5 shrink-0 group min-w-[170px]">
+          <button
+            onClick={openLocation}
+            className="hidden lg:flex items-center gap-2.5 shrink-0 group min-w-[170px]"
+          >
             <div className="w-9 h-9 rounded-btn bg-orangeTint flex items-center justify-center shrink-0">
               <MapPin size={17} className="text-primaryOrange" />
             </div>
             <div className="text-left">
               <p className="font-jakarta text-xs text-muted leading-none">Deliver to</p>
-              <p className="font-inter font-bold text-ink text-sm leading-snug flex items-center gap-1 mt-0.5">
-                Sector 18, Noida
-                <ChevronDown size={12} className="text-muted mt-px" />
+              <p className="font-inter font-bold text-ink text-sm leading-snug flex items-center gap-1 mt-0.5 truncate">
+                {address}
+                <ChevronDown size={12} className="text-muted mt-px shrink-0" />
               </p>
-              <p className="font-jakarta text-xs text-muted leading-none mt-0.5">UP 201301</p>
+              {subLabel && (
+                <p className="font-jakarta text-xs text-muted leading-none mt-0.5">{subLabel}</p>
+              )}
             </div>
           </button>
 
