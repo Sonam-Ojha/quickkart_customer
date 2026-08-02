@@ -2,13 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Minus, Trash2, ShoppingBag, CheckCircle,
-  Clock, ChevronRight, ShieldCheck,
+  Clock, ChevronRight, ShieldCheck, Phone, Mail,
 } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
 import ProductImage from '@/components/ui/ProductImage'
 import { useOrderStore } from '@/store/orderStore'
 import { useAuthStore } from '@/store/authStore'
+import api from '@/lib/api'
 
 const DELIVERY_FEE    = 25
 const FREE_DELIVERY   = 99
@@ -34,13 +35,18 @@ export default function CartDrawer() {
   const [success, setSuccess]       = useState(false)
   const [placedTotal, setPlacedTotal] = useState(0)
   const [showAuth, setShowAuth]     = useState(false)
-  const [step, setStep]             = useState<'phone' | 'otp'>('phone')
+  const [step, setStep]             = useState<'input' | 'otp'>('input')
+  const [method, setMethod]         = useState<'phone' | 'email'>('phone')
   const [phone, setPhone]           = useState('')
+  const [email, setEmail]           = useState('')
   const [otp, setOtp]               = useState(['', '', '', '', '', ''])
+  const [otpSending, setOtpSending] = useState(false)
+  const [otpError, setOtpError]     = useState('')
   const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollRef    = useRef<HTMLDivElement>(null)
   const closeBtnRef  = useRef<HTMLButtonElement>(null)
   const phoneInputRef = useRef<HTMLInputElement>(null)
+  const emailInputRef = useRef<HTMLInputElement>(null)
   const otpRefs = useRef<Array<HTMLInputElement | null>>([])
 
   const itemList    = Object.values(items)
@@ -82,19 +88,20 @@ export default function CartDrawer() {
     }
   }, [isOpen])
 
-  // Phone modal: focus input when opened, reset everything when closed
   useEffect(() => {
     if (showAuth) {
-      setStep('phone')
-      phoneInputRef.current?.focus()
+      setStep('input')
+      setOtpError('')
+      setTimeout(() => {
+        method === 'phone' ? phoneInputRef.current?.focus() : emailInputRef.current?.focus()
+      }, 50)
     } else {
-      setPhone('')
+      setPhone(''); setEmail('')
       setOtp(['', '', '', '', '', ''])
-      setStep('phone')
+      setStep('input'); setOtpError('')
     }
   }, [showAuth])
 
-  // Focus the first OTP box when entering the OTP step
   useEffect(() => {
     if (showAuth && step === 'otp') otpRefs.current[0]?.focus()
   }, [showAuth, step])
@@ -127,23 +134,42 @@ export default function CartDrawer() {
     }, 2500)
   }
 
-  // Step 1 → 2: phone number Continue → move to OTP entry
-  const handleContinue = () => {
-    if (phone.length !== 10) return
-    setOtp(['', '', '', '', '', ''])
-    setStep('otp')
+  const handleContinue = async () => {
+    if (method === 'phone' && phone.length !== 10) return
+    if (method === 'email' && !email.includes('@')) return
+    setOtpSending(true); setOtpError('')
+    try {
+      const payload = method === 'phone' ? { mobile: phone } : { email }
+      await api.post('/otp/send', payload)
+      setOtp(['', '', '', '', '', ''])
+      setStep('otp')
+    } catch (e: any) {
+      setOtpError(e?.response?.data?.message ?? 'Failed to send OTP')
+    } finally {
+      setOtpSending(false)
+    }
   }
 
   const otpValue = otp.join('')
 
-  // Step 2: verify OTP → sign in (mock) and place the order
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (otpValue.length !== 6) return
-    setAuth(
-      { id: `U-${phone}`, name: 'Guest', phone, walletBalance: 0 },
-      `token-${phone}`,
-    )
-    placeOrder()
+    setOtpSending(true); setOtpError('')
+    try {
+      const key = method === 'phone' ? { mobile: phone } : { email }
+      await api.post('/otp/verify', { ...key, otp: otpValue })
+      setAuth(
+        { id: `U-${phone || email}`, name: 'Guest', phone: phone || '', email: email || undefined, walletBalance: 0 },
+        `token-${phone || email}`,
+      )
+      placeOrder()
+    } catch (e: any) {
+      setOtpError(e?.response?.data?.message ?? 'Invalid OTP')
+      setOtp(['', '', '', '', '', ''])
+      otpRefs.current[0]?.focus()
+    } finally {
+      setOtpSending(false)
+    }
   }
 
   const setOtpDigit = (i: number, val: string) => {
@@ -383,7 +409,7 @@ export default function CartDrawer() {
         )}
       </aside>
 
-      {/* ── Phone-login modal (QuickKart branding) ── */}
+      {/* ── Phone-login modal (Jhatpats branding) ── */}
       {showAuth && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => setShowAuth(false)} />
@@ -402,23 +428,20 @@ export default function CartDrawer() {
                   <ShoppingBag size={30} className="text-white" />
                 </div>
                 <span className="font-inter font-black text-2xl tracking-tight">
-                  <span className="text-primaryOrange">quick</span>
-                  <span className="text-deepTeal">kart</span>
+                  <span className="text-primaryOrange">jhat</span>
+                  <span className="text-deepTeal">pats</span>
                 </span>
-                {step === 'phone' ? (
+                {step === 'input' ? (
                   <>
                     <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Groceries in 10 minutes</h3>
                     <p className="font-jakarta text-textSecondary text-base mt-1.5">Log in or Sign up</p>
                   </>
                 ) : (
                   <>
-                    <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Verify your number</h3>
+                    <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Verify your {method === 'phone' ? 'number' : 'email'}</h3>
                     <p className="font-jakarta text-textSecondary text-base mt-1.5">
-                      OTP sent to +91 {phone}{' '}
-                      <button
-                        onClick={() => setStep('phone')}
-                        className="text-primaryOrange font-semibold hover:underline"
-                      >
+                      OTP sent to {method === 'phone' ? `+91 ${phone}` : email}{' '}
+                      <button onClick={() => setStep('input')} className="text-primaryOrange font-semibold hover:underline">
                         Change
                       </button>
                     </p>
@@ -426,34 +449,57 @@ export default function CartDrawer() {
                 )}
               </div>
 
-              {step === 'phone' ? (
+              {step === 'input' ? (
                 <>
-                  {/* Phone input */}
-                  <div className="mt-8 flex items-center h-14 bg-white border border-border rounded-btn px-4 focus-within:border-primaryOrange focus-within:ring-2 focus-within:ring-primaryOrange/15 transition-all">
-                    <span className="font-inter font-bold text-ink text-base">+91</span>
-                    <span className="w-px h-6 bg-border mx-3.5" />
-                    <input
-                      ref={phoneInputRef}
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleContinue() }}
-                      inputMode="numeric"
-                      placeholder="Enter mobile number"
-                      className="flex-1 min-w-0 bg-transparent font-jakarta text-base text-ink placeholder:text-muted outline-none border-none"
-                    />
+                  {/* Method toggle */}
+                  <div className="mt-6 flex bg-inputFill rounded-btn p-1">
+                    {(['phone', 'email'] as const).map((m) => (
+                      <button key={m} onClick={() => setMethod(m)}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-inter font-semibold text-sm transition-all ${
+                          method === m ? 'bg-white text-ink shadow-sm' : 'text-textSecondary hover:text-ink'
+                        }`}>
+                        {m === 'phone' ? <Phone size={14} /> : <Mail size={14} />}
+                        {m === 'phone' ? 'Mobile' : 'Email'}
+                      </button>
+                    ))}
                   </div>
 
+                  {/* Input */}
+                  {method === 'phone' ? (
+                    <div className="mt-4 flex items-center h-14 bg-white border border-border rounded-btn px-4 focus-within:border-primaryOrange focus-within:ring-2 focus-within:ring-primaryOrange/15 transition-all">
+                      <span className="font-inter font-bold text-ink text-base">+91</span>
+                      <span className="w-px h-6 bg-border mx-3.5" />
+                      <input ref={phoneInputRef} value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleContinue() }}
+                        inputMode="numeric" placeholder="Enter mobile number"
+                        className="flex-1 min-w-0 bg-transparent font-jakarta text-base text-ink placeholder:text-muted outline-none border-none"
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-4 flex items-center h-14 bg-white border border-border rounded-btn px-4 focus-within:border-primaryOrange focus-within:ring-2 focus-within:ring-primaryOrange/15 transition-all">
+                      <Mail size={16} className="text-muted shrink-0" />
+                      <span className="w-px h-6 bg-border mx-3.5" />
+                      <input ref={emailInputRef} value={email} type="email"
+                        onChange={(e) => setEmail(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleContinue() }}
+                        placeholder="Enter email address"
+                        className="flex-1 min-w-0 bg-transparent font-jakarta text-base text-ink placeholder:text-muted outline-none border-none"
+                      />
+                    </div>
+                  )}
+
+                  {otpError && <p className="mt-2 text-sm text-red-500 text-center">{otpError}</p>}
+
                   {/* Continue */}
-                  <button
-                    onClick={handleContinue}
-                    disabled={phone.length !== 10}
+                  <button onClick={handleContinue}
+                    disabled={otpSending || (method === 'phone' ? phone.length !== 10 : !email.includes('@'))}
                     className={`mt-5 w-full h-14 rounded-btn font-inter font-bold text-base transition-colors ${
-                      phone.length === 10
+                      !otpSending && (method === 'phone' ? phone.length === 10 : email.includes('@'))
                         ? 'bg-primaryOrange text-white shadow-cta hover:bg-orangeDark'
                         : 'bg-muted text-white cursor-not-allowed'
-                    }`}
-                  >
-                    Continue
+                    }`}>
+                    {otpSending ? 'Sending OTP…' : 'Continue'}
                   </button>
                 </>
               ) : (
@@ -490,26 +536,24 @@ export default function CartDrawer() {
                     ))}
                   </div>
 
+                  {otpError && <p className="mt-2 text-sm text-red-500 text-center">{otpError}</p>}
+
                   {/* Verify */}
-                  <button
-                    onClick={handleVerify}
-                    disabled={otpValue.length !== 6}
+                  <button onClick={handleVerify}
+                    disabled={otpValue.length !== 6 || otpSending}
                     className={`mt-5 w-full h-14 rounded-btn font-inter font-bold text-base transition-colors ${
-                      otpValue.length === 6
+                      otpValue.length === 6 && !otpSending
                         ? 'bg-primaryOrange text-white shadow-cta hover:bg-orangeDark'
                         : 'bg-muted text-white cursor-not-allowed'
-                    }`}
-                  >
-                    Verify &amp; Continue
+                    }`}>
+                    {otpSending ? 'Verifying…' : 'Verify & Continue'}
                   </button>
 
                   {/* Resend */}
                   <p className="mt-4 text-center font-jakarta text-sm text-textSecondary">
                     Didn&apos;t receive the code?{' '}
-                    <button
-                      onClick={() => { setOtp(['', '', '', '', '', '']); otpRefs.current[0]?.focus() }}
-                      className="text-primaryOrange font-semibold hover:underline"
-                    >
+                    <button onClick={handleContinue} disabled={otpSending}
+                      className="text-primaryOrange font-semibold hover:underline disabled:opacity-50">
                       Resend OTP
                     </button>
                   </p>

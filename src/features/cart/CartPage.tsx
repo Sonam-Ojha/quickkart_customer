@@ -8,11 +8,15 @@ import { useProducts } from '@/hooks/useProducts'
 import { useAuthStore } from '@/store/authStore'
 import ProductCard from '@/components/ui/ProductCard'
 import ProductImage from '@/components/ui/ProductImage'
+import OtpModal from '@/components/ui/OtpModal'
 import api from '@/lib/api'
 
 export default function CartPage() {
-  const navigate      = useNavigate()
+  const navigate        = useNavigate()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
+  const userEmail       = useAuthStore((s) => s.user?.email ?? '')
+  const [otpVerified, setOtpVerified]   = useState(false)
+  const [showOtpModal, setShowOtpModal] = useState(isAuthenticated)
   const [success, setSuccess]         = useState(false)
   const [coupon, setCoupon]           = useState('')
   const [couponDiscount, setCouponDiscount] = useState(0)
@@ -63,6 +67,23 @@ export default function CartPage() {
     recordOrder(itemList, grandTotal)
     setSuccess(true)
     setTimeout(() => { clear(); navigate('/home') }, 3000)
+  }
+
+  // Not logged in → redirect to login
+  if (!isAuthenticated) {
+    navigate('/login?redirect=/cart')
+    return null
+  }
+
+  // OTP not yet verified → show modal
+  if (showOtpModal) {
+    return (
+      <OtpModal
+        email={userEmail}
+        onVerified={() => { setOtpVerified(true); setShowOtpModal(false) }}
+        onClose={() => navigate(-1)}
+      />
+    )
   }
 
   if (itemList.length === 0 && !success) {

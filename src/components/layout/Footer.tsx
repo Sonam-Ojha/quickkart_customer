@@ -8,9 +8,9 @@ export default function Footer() {
 
   const tagline  = s?.footer_tagline  ?? 'Groceries, essentials & documents delivered in minutes.'
   const phone    = s?.support_phone   ?? '1800-XXX-XXXX (Toll Free)'
-  const email    = s?.support_email   ?? 'help@quickkart.in'
+  const email    = s?.support_email   ?? 'help@jhatpats.in'
   const address  = s?.company_address ?? 'Noida, Uttar Pradesh'
-  const copy     = s?.copyright_text  ?? '© 2026 QuickKart Technologies Pvt. Ltd. All rights reserved.'
+  const copy     = s?.copyright_text  ?? '© 2026 Jhatpats Technologies Pvt. Ltd. All rights reserved.'
   const badge    = s?.footer_badge    ?? '10-minute delivery · 30,000+ products'
 
   return (

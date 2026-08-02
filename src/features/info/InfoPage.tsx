@@ -57,7 +57,7 @@ export default function InfoPage() {
             to="/home"
             className="inline-flex items-center gap-2 text-primaryOrange font-inter font-semibold text-sm hover:underline"
           >
-            ← Back to QuickKart Home
+            ← Back to Jhatpats Home
           </Link>
         </div>
       </div>

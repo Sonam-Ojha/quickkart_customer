@@ -25,9 +25,9 @@ const DEFAULT_WHY: WhyItem[] = [
 const DEFAULTS: SiteSettings = {
   footer_tagline:          'Groceries, essentials & documents delivered in minutes.',
   support_phone:           '1800-XXX-XXXX (Toll Free)',
-  support_email:           'help@quickkart.in',
+  support_email:           'help@jhatpats.in',
   company_address:         'Noida, Uttar Pradesh',
-  copyright_text:          '© 2026 QuickKart Technologies Pvt. Ltd. All rights reserved.',
+  copyright_text:          '© 2026 Jhatpats Technologies Pvt. Ltd. All rights reserved.',
   footer_badge:            '10-minute delivery · 30,000+ products',
   delivery_fee:            '30',
   free_delivery_threshold: '99',

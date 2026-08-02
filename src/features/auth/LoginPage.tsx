@@ -4,7 +4,7 @@ import { Phone, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Truck, Zap, Al
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 
-type Mode = 'login' | 'register'
+type Mode = 'login' | 'register' | 'otp'
 
 export default function LoginPage() {
   const navigate          = useNavigate()
@@ -16,6 +16,40 @@ export default function LoginPage() {
   const [form, setForm]   = useState({ name: '', identifier: '', mobile: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // OTP login state
+  const [otpContact, setOtpContact]   = useState('')
+  const [otpMethod, setOtpMethod]     = useState<'mobile' | 'email'>('mobile')
+  const [otpStep, setOtpStep]         = useState<'input' | 'verify'>('input')
+  const [otpDigits, setOtpDigits]     = useState('')
+  const [otpSending, setOtpSending]   = useState(false)
+
+  const handleSendOtp = async () => {
+    if (!otpContact.trim()) return
+    setOtpSending(true); setError('')
+    try {
+      const payload = otpMethod === 'mobile' ? { mobile: otpContact } : { email: otpContact }
+      await api.post('/otp/send', payload)
+      setOtpStep('verify')
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to send OTP')
+    } finally { setOtpSending(false) }
+  }
+
+  const handleOtpLogin = async () => {
+    if (otpDigits.length !== 6) return
+    setLoading(true); setError('')
+    try {
+      const payload = otpMethod === 'mobile'
+        ? { mobile: otpContact, otp: otpDigits }
+        : { email: otpContact, otp: otpDigits }
+      const { data } = await api.post('/auth/otp-login', payload)
+      setAuth(data.user, data.token)
+      navigate(redirectTo)
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Invalid OTP')
+    } finally { setLoading(false) }
+  }
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -82,7 +116,7 @@ export default function LoginPage() {
         </div>
 
         <p className="font-jakarta text-white/40 text-xs relative z-10">
-          © 2026 QuickKart · 30,000+ products
+          © 2026 Jhatpats · 30,000+ products
         </p>
       </div>
 
@@ -101,28 +135,78 @@ export default function LoginPage() {
           </h2>
           <p className="font-jakarta text-textSecondary text-sm mb-8">
             {mode === 'login'
-              ? 'Login to your QuickKart account'
+              ? 'Login to your Jhatpats account'
               : 'Sign up to start ordering in minutes'}
           </p>
 
           {/* Mode toggle */}
           <div className="flex bg-inputFill rounded-btn p-1 mb-8">
-            {(['login', 'register'] as Mode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
+            {([['login','Login'], ['register','Sign Up'], ['otp','OTP Login']] as [Mode,string][]).map(([m, label]) => (
+              <button key={m} onClick={() => { setMode(m); setError(''); setOtpStep('input') }}
                 className={`flex-1 py-2.5 rounded-lg font-inter font-semibold text-sm transition-all ${
-                  mode === m
-                    ? 'bg-white text-ink shadow-sm'
-                    : 'text-textSecondary hover:text-ink'
-                }`}
-              >
-                {m === 'login' ? 'Login' : 'Sign Up'}
+                  mode === m ? 'bg-white text-ink shadow-sm' : 'text-textSecondary hover:text-ink'
+                }`}>
+                {label}
               </button>
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* OTP Login form */}
+          {mode === 'otp' && (
+            <div className="space-y-4">
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600 font-jakarta">
+                  <AlertCircle size={14} className="shrink-0" />{error}
+                </div>
+              )}
+              {otpStep === 'input' ? (
+                <>
+                  <div className="flex bg-inputFill rounded-lg p-1">
+                    {(['mobile','email'] as const).map(m => (
+                      <button key={m} onClick={() => setOtpMethod(m)}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-semibold transition-all ${
+                          otpMethod === m ? 'bg-white text-ink shadow-sm' : 'text-textSecondary'
+                        }`}>
+                        {m === 'mobile' ? <Phone size={13}/> : <Mail size={13}/>}
+                        {m === 'mobile' ? 'Mobile' : 'Email'}
+                      </button>
+                    ))}
+                  </div>
+                  <input type={otpMethod === 'email' ? 'email' : 'tel'}
+                    placeholder={otpMethod === 'mobile' ? '10-digit mobile number' : 'your@email.com'}
+                    value={otpContact} onChange={e => setOtpContact(e.target.value)}
+                    className="w-full h-12 bg-inputFill border border-border rounded-btn px-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  />
+                  <button onClick={handleSendOtp} disabled={otpSending || !otpContact.trim()}
+                    className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-btn flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
+                    {otpSending ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <><ArrowRight size={16}/> Send OTP</>}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-textSecondary font-jakarta">
+                    OTP sent to <b>{otpContact}</b>{' '}
+                    <button onClick={() => setOtpStep('input')} className="text-primaryOrange hover:underline">Change</button>
+                  </p>
+                  <input type="text" inputMode="numeric" maxLength={6}
+                    placeholder="Enter 6-digit OTP"
+                    value={otpDigits} onChange={e => setOtpDigits(e.target.value.replace(/\D/g,'').slice(0,6))}
+                    className="w-full h-12 bg-inputFill border border-border rounded-btn px-4 font-jakarta text-sm text-ink text-center tracking-widest placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  />
+                  <button onClick={handleOtpLogin} disabled={loading || otpDigits.length !== 6}
+                    className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-btn flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
+                    {loading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <>Verify & Login <ArrowRight size={16}/></>}
+                  </button>
+                  <button onClick={handleSendOtp} disabled={otpSending}
+                    className="w-full text-center text-sm text-primaryOrange font-semibold hover:underline disabled:opacity-50">
+                    Resend OTP
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className={`space-y-4 ${mode === 'otp' ? 'hidden' : ''}`}>
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600 font-jakarta">
                 <AlertCircle size={14} className="shrink-0" />{error}
@@ -228,7 +312,7 @@ export default function LoginPage() {
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  {mode === 'login' ? 'Login to QuickKart' : 'Create Account'}
+                  {mode === 'login' ? 'Login to Jhatpats' : 'Create Account'}
                   <ArrowRight size={18} />
                 </>
               )}
