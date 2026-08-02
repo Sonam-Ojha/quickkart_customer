@@ -13,17 +13,17 @@ export interface InfoPage {
 export const infoPages: Record<string, InfoPage> = {
 
   'about-us': {
-    title: 'About QuickKart',
+    title: 'About Jhatpats',
     subtitle: 'Delivering happiness in 10 minutes',
     emoji: '🛒',
     sections: [
       {
         heading: 'Who We Are',
-        body: 'QuickKart is India\'s fastest growing quick-commerce platform, delivering groceries, fresh produce, daily essentials, and even printouts right to your doorstep in 10 minutes. Founded in 2024, we operate across major cities with a mission to make everyday shopping effortless.',
+        body: 'Jhatpats is India\'s fastest growing quick-commerce platform, delivering groceries, fresh produce, daily essentials, and even printouts right to your doorstep in 10 minutes. Founded in 2024, we operate across major cities with a mission to make everyday shopping effortless.',
       },
       {
         heading: 'Our Mission',
-        body: 'We believe your time is precious. Our mission is simple — get you what you need, when you need it, without stepping out. From fresh vegetables to medicines to office printouts, QuickKart is your one-stop neighborhood store, open 24x7.',
+        body: 'We believe your time is precious. Our mission is simple — get you what you need, when you need it, without stepping out. From fresh vegetables to medicines to office printouts, Jhatpats is your one-stop neighborhood store, open 24x7.',
       },
       {
         heading: 'Our Numbers',
@@ -37,13 +37,13 @@ export const infoPages: Record<string, InfoPage> = {
   },
 
   'careers': {
-    title: 'Careers at QuickKart',
+    title: 'Careers at Jhatpats',
     subtitle: 'Join us and build the future of quick commerce',
     emoji: '💼',
     sections: [
       {
-        heading: 'Why QuickKart?',
-        body: 'We move fast — literally and figuratively. At QuickKart, you\'ll work on problems that matter to millions of people every day. We offer competitive salaries, equity, flexible work, and a team that loves what it does.',
+        heading: 'Why Jhatpats?',
+        body: 'We move fast — literally and figuratively. At Jhatpats, you\'ll work on problems that matter to millions of people every day. We offer competitive salaries, equity, flexible work, and a team that loves what it does.',
       },
       {
         heading: 'Open Roles',
@@ -55,19 +55,19 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: 'How to Apply',
-        body: 'Send your resume to careers@quickkart.in with the role name in the subject line. We typically respond within 3 business days. We do not charge any application fees.',
+        body: 'Send your resume to careers@jhatpats.in with the role name in the subject line. We typically respond within 3 business days. We do not charge any application fees.',
       },
     ],
   },
 
   'blog': {
-    title: 'QuickKart Blog',
+    title: 'Jhatpats Blog',
     subtitle: 'Tips, news & stories from our kitchen',
     emoji: '📝',
     sections: [
       {
         heading: '🥗 5 Healthy Breakfast Ideas Under ₹50',
-        body: 'Start your mornings right without burning a hole in your pocket. We\'ve curated 5 nutritious breakfast recipes using everyday ingredients available on QuickKart — all under ₹50 per serving.',
+        body: 'Start your mornings right without burning a hole in your pocket. We\'ve curated 5 nutritious breakfast recipes using everyday ingredients available on Jhatpats — all under ₹50 per serving.',
       },
       {
         heading: '🚀 How We Deliver in 10 Minutes',
@@ -75,7 +75,7 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: '🌾 Farm to Doorstep: Our Fresh Produce Story',
-        body: 'QuickKart partners with 200+ local farmers across Haryana, UP and Maharashtra. Here\'s how we ensure your vegetables are picked fresh in the morning and delivered the same day.',
+        body: 'Jhatpats partners with 200+ local farmers across Haryana, UP and Maharashtra. Here\'s how we ensure your vegetables are picked fresh in the morning and delivered the same day.',
       },
       {
         heading: '🖨️ Introducing QuickPrints — Documents in 25 Minutes',
@@ -86,16 +86,16 @@ export const infoPages: Record<string, InfoPage> = {
 
   'press': {
     title: 'Press & Media',
-    subtitle: 'QuickKart in the news',
+    subtitle: 'Jhatpats in the news',
     emoji: '📰',
     sections: [
       {
         heading: 'Press Releases',
-        body: '📅 June 2026 — QuickKart raises ₹150 Cr Series B funding led by Tiger Global\n📅 March 2026 — QuickKart launches QuickPrints service across Delhi NCR\n📅 January 2026 — QuickKart crosses 1 lakh monthly orders in Noida alone',
+        body: '📅 June 2026 — Jhatpats raises ₹150 Cr Series B funding led by Tiger Global\n📅 March 2026 — Jhatpats launches QuickPrints service across Delhi NCR\n📅 January 2026 — Jhatpats crosses 1 lakh monthly orders in Noida alone',
       },
       {
         heading: 'Media Coverage',
-        body: 'QuickKart has been featured in Economic Times, YourStory, Inc42, The Hindu BusinessLine, and NDTV Profit. Our founders have appeared on Shark Tank India Season 4.',
+        body: 'Jhatpats has been featured in Economic Times, YourStory, Inc42, The Hindu BusinessLine, and NDTV Profit. Our founders have appeared on Shark Tank India Season 4.',
       },
       {
         heading: 'Awards & Recognition',
@@ -103,7 +103,7 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: 'Media Contact',
-        body: 'For press inquiries, interviews, and media kits, please reach out to our PR team at press@quickkart.in. We typically respond within 24 hours on business days.',
+        body: 'For press inquiries, interviews, and media kits, please reach out to our PR team at press@jhatpats.in. We typically respond within 24 hours on business days.',
       },
     ],
   },
@@ -123,7 +123,7 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: 'How do I pay?',
-        body: 'We accept UPI (PhonePe, GPay, Paytm), credit/debit cards, net banking, and Cash on Delivery. You can also use QuickKart Wallet balance or referral credits.',
+        body: 'We accept UPI (PhonePe, GPay, Paytm), credit/debit cards, net banking, and Cash on Delivery. You can also use Jhatpats Wallet balance or referral credits.',
       },
       {
         heading: 'Can I cancel my order?',
@@ -131,7 +131,7 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: 'What if an item is missing or damaged?',
-        body: 'We\'re sorry! Report it through the app within 24 hours of delivery. We will issue an instant refund to your QuickKart Wallet or original payment method within 24-48 hours.',
+        body: 'We\'re sorry! Report it through the app within 24 hours of delivery. We will issue an instant refund to your Jhatpats Wallet or original payment method within 24-48 hours.',
       },
     ],
   },
@@ -151,7 +151,7 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: 'Live Tracking',
-        body: 'Once your delivery partner picks up your order, you can see their live location on the map inside the QuickKart app. SMS updates are also sent at each stage.',
+        body: 'Once your delivery partner picks up your order, you can see their live location on the map inside the Jhatpats app. SMS updates are also sent at each stage.',
       },
       {
         heading: 'Delivery Partner Contact',
@@ -175,7 +175,7 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: 'Refund Timeline',
-        body: 'Approved refunds are processed within 24 hours. Amount is credited to your QuickKart Wallet instantly, or to your original payment method within 3-5 business days depending on your bank.',
+        body: 'Approved refunds are processed within 24 hours. Amount is credited to your Jhatpats Wallet instantly, or to your original payment method within 3-5 business days depending on your bank.',
       },
       {
         heading: 'Non-Returnable Items',
@@ -191,7 +191,7 @@ export const infoPages: Record<string, InfoPage> = {
     sections: [
       {
         heading: 'Customer Support',
-        body: 'Call us: 1800-XXX-XXXX (Toll Free, 24x7)\nEmail: help@quickkart.in\nResponse time: Under 2 hours on email, instant on call',
+        body: 'Call us: 1800-XXX-XXXX (Toll Free, 24x7)\nEmail: help@jhatpats.in\nResponse time: Under 2 hours on email, instant on call',
       },
       {
         heading: 'WhatsApp Support',
@@ -199,35 +199,35 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: 'Office Address',
-        body: 'QuickKart Technologies Pvt. Ltd.\nPlot No. 45, Sector 62\nNoida, Uttar Pradesh — 201309\n\nMonday to Saturday, 10 AM to 6 PM',
+        body: 'Jhatpats Technologies Pvt. Ltd.\nPlot No. 45, Sector 62\nNoida, Uttar Pradesh — 201309\n\nMonday to Saturday, 10 AM to 6 PM',
       },
       {
         heading: 'For Business Enquiries',
-        body: 'Want to list your products on QuickKart, or partner as a vendor? Email us at vendors@quickkart.in. For advertising and brand partnerships, write to brands@quickkart.in.',
+        body: 'Want to list your products on Jhatpats, or partner as a vendor? Email us at vendors@jhatpats.in. For advertising and brand partnerships, write to brands@jhatpats.in.',
       },
     ],
   },
 
   'partner-with-us': {
-    title: 'Partner with QuickKart',
+    title: 'Partner with Jhatpats',
     subtitle: 'Grow your business with India\'s fastest delivery network',
     emoji: '🤝',
     sections: [
       {
-        heading: 'Sell on QuickKart',
-        body: 'Are you a brand, manufacturer, or local retailer? List your products on QuickKart and reach lakhs of customers in your city. We handle storage, packaging, and last-mile delivery — you focus on your product.',
+        heading: 'Sell on Jhatpats',
+        body: 'Are you a brand, manufacturer, or local retailer? List your products on Jhatpats and reach lakhs of customers in your city. We handle storage, packaging, and last-mile delivery — you focus on your product.',
       },
       {
         heading: 'Become a Delivery Partner',
-        body: 'Join our network of 5,000+ delivery partners across India. Earn ₹20,000–₹40,000/month with flexible hours, weekly payouts, and accident insurance. Apply at careers@quickkart.in with subject "Delivery Partner".',
+        body: 'Join our network of 5,000+ delivery partners across India. Earn ₹20,000–₹40,000/month with flexible hours, weekly payouts, and accident insurance. Apply at careers@jhatpats.in with subject "Delivery Partner".',
       },
       {
         heading: 'Dark Store Franchise',
-        body: 'Want to open a QuickKart dark store in your city? We offer a franchise model with full operational support, tech infrastructure, and inventory management. Minimum investment starts at ₹15 lakhs.',
+        body: 'Want to open a Jhatpats dark store in your city? We offer a franchise model with full operational support, tech infrastructure, and inventory management. Minimum investment starts at ₹15 lakhs.',
       },
       {
         heading: 'Get in Touch',
-        body: 'For vendor registration: vendors@quickkart.in\nFor franchise enquiries: franchise@quickkart.in\nFor delivery partner onboarding: delivery@quickkart.in',
+        body: 'For vendor registration: vendors@jhatpats.in\nFor franchise enquiries: franchise@jhatpats.in\nFor delivery partner onboarding: delivery@jhatpats.in',
       },
     ],
   },
@@ -255,23 +255,23 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: '5. Your Rights',
-        body: 'You have the right to access, correct, or delete your personal data at any time. To exercise these rights, email us at privacy@quickkart.in. We will respond within 30 days as per IT Act 2000 and DPDP Act 2023.',
+        body: 'You have the right to access, correct, or delete your personal data at any time. To exercise these rights, email us at privacy@jhatpats.in. We will respond within 30 days as per IT Act 2000 and DPDP Act 2023.',
       },
     ],
   },
 
   'terms-of-service': {
     title: 'Terms of Service',
-    subtitle: 'Please read these terms carefully before using QuickKart',
+    subtitle: 'Please read these terms carefully before using Jhatpats',
     emoji: '📋',
     sections: [
       {
         heading: '1. Acceptance of Terms',
-        body: 'By accessing or using QuickKart\'s website, app, or services, you agree to be bound by these Terms of Service and our Privacy Policy. If you disagree with any part, you may not use our services.',
+        body: 'By accessing or using Jhatpats\'s website, app, or services, you agree to be bound by these Terms of Service and our Privacy Policy. If you disagree with any part, you may not use our services.',
       },
       {
         heading: '2. Use of Service',
-        body: 'QuickKart is intended for personal, non-commercial use. You must be at least 18 years old to create an account. You are responsible for maintaining the confidentiality of your account credentials.',
+        body: 'Jhatpats is intended for personal, non-commercial use. You must be at least 18 years old to create an account. You are responsible for maintaining the confidentiality of your account credentials.',
       },
       {
         heading: '3. Orders & Payments',
@@ -279,7 +279,7 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: '4. Limitation of Liability',
-        body: 'QuickKart\'s liability is limited to the value of the order placed. We are not liable for indirect, incidental, or consequential damages. We do not guarantee uninterrupted service availability.',
+        body: 'Jhatpats\'s liability is limited to the value of the order placed. We are not liable for indirect, incidental, or consequential damages. We do not guarantee uninterrupted service availability.',
       },
       {
         heading: '5. Governing Law',
@@ -290,7 +290,7 @@ export const infoPages: Record<string, InfoPage> = {
 
   'cookie-policy': {
     title: 'Cookie Policy',
-    subtitle: 'How we use cookies on QuickKart',
+    subtitle: 'How we use cookies on Jhatpats',
     emoji: '🍪',
     sections: [
       {
@@ -322,8 +322,8 @@ export const infoPages: Record<string, InfoPage> = {
         body: 'Refunds are issued in the following cases: wrong item delivered, damaged or expired product, missing items from your order, order cancelled before packing began, or payment debited but order not placed.',
       },
       {
-        heading: 'Refund to QuickKart Wallet',
-        body: 'If you choose refund to QuickKart Wallet, the amount is credited instantly once approved. Wallet balance can be used for future purchases with no expiry.',
+        heading: 'Refund to Jhatpats Wallet',
+        body: 'If you choose refund to Jhatpats Wallet, the amount is credited instantly once approved. Wallet balance can be used for future purchases with no expiry.',
       },
       {
         heading: 'Refund to Original Payment Method',

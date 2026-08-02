@@ -19,7 +19,8 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/home" replace />} />
           <Route path="/home"        element={<HomePage />} />
-          <Route path="/category"    element={<CategoryPage />} />
+          <Route path="/category"        element={<CategoryPage />} />
+          <Route path="/category/:id"    element={<CategoryPage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
           <Route path="/search"      element={<SearchPage />} />
           <Route path="/print"       element={<PrintPage />} />

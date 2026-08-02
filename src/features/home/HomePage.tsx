@@ -1,12 +1,12 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BannerCarousel from '@/components/ui/BannerCarousel'
 import ProductCard from '@/components/ui/ProductCard'
 import CountdownTimer from '@/components/ui/CountdownTimer'
 import PromoTile, { type PromoTileData } from '@/components/ui/PromoTile'
-import { useCategories } from '@/hooks/useCategories'
+import { useCategories, useCategoryDetail } from '@/hooks/useCategories'
 import { useBanners } from '@/hooks/useBanners'
 import { useProducts } from '@/hooks/useProducts'
+import type { Category } from '@/hooks/useCategories'
 
 const BG_THEME: Record<string, Pick<PromoTileData, 'gradient' | 'ring' | 'accent'>> = {
   'orange-tint':  { gradient: 'from-orange-50 to-amber-50',   ring: 'ring-orange-100',  accent: 'text-orange-600'  },
@@ -18,20 +18,125 @@ const BG_THEME: Record<string, Pick<PromoTileData, 'gradient' | 'ring' | 'accent
 }
 const DEFAULT_THEME = BG_THEME['orange-tint']
 
-// Skeleton row for product grids
+// Cycling tints for category card backgrounds
+const CAT_TINTS = [
+  'bg-orange-50 border-orange-100',
+  'bg-green-50 border-green-100',
+  'bg-blue-50 border-blue-100',
+  'bg-purple-50 border-purple-100',
+  'bg-yellow-50 border-yellow-100',
+  'bg-pink-50 border-pink-100',
+  'bg-teal-50 border-teal-100',
+  'bg-red-50 border-red-100',
+]
+const CAT_ICON_BG = [
+  'bg-orange-100',
+  'bg-green-100',
+  'bg-blue-100',
+  'bg-purple-100',
+  'bg-yellow-100',
+  'bg-pink-100',
+  'bg-teal-100',
+  'bg-red-100',
+]
+
 function ProductSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="rounded-xl bg-gray-100 animate-pulse" style={{ height: 200 }} />
+        <div key={i} className="rounded-xl bg-gray-100 animate-pulse h-52" />
       ))}
     </div>
   )
 }
 
+// ── Per-category product row (fetches its own data) ───────────────────────────
+function CategoryProductRow({ cat }: { cat: Category }) {
+  const navigate = useNavigate()
+  const { data: detail, isLoading } = useCategoryDetail(cat.id)
+  const products = (detail?.products ?? []).slice(0, 6)
+
+  if (!isLoading && products.length === 0) return null
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          {cat.imageUrl
+            ? <img src={cat.imageUrl} alt={cat.name} className="w-8 h-8 rounded-lg object-cover" />
+            : cat.icon
+              ? <span className="text-2xl">{cat.icon}</span>
+              : null
+          }
+          <h2 className="font-inter font-bold text-ink text-xl">{cat.name}</h2>
+        </div>
+        <button
+          onClick={() => navigate(`/category/${cat.id}`)}
+          className="font-inter text-sm text-primaryOrange font-semibold hover:underline whitespace-nowrap"
+        >
+          See all →
+        </button>
+      </div>
+      {isLoading
+        ? <ProductSkeleton count={6} />
+        : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {products.map(p => <ProductCard key={p.id} product={p} />)}
+          </div>
+        )
+      }
+    </section>
+  )
+}
+
+// ── Main categories horizontal bar ───────────────────────────────────────────
+function MainCategoryBar({ categories, loading }: { categories: Category[]; loading: boolean }) {
+  const navigate = useNavigate()
+  const roots = categories.filter(c => !c.parentId)
+
+  return (
+    <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+      {loading
+        ? Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="shrink-0 flex flex-col items-center gap-3">
+              <div className="w-36 h-48 rounded-3xl bg-slate-100 animate-pulse" />
+              <div className="w-32 h-4 rounded bg-slate-100 animate-pulse" />
+              <div className="w-24 h-4 rounded bg-slate-100 animate-pulse" />
+            </div>
+          ))
+        : roots.map((cat, i) => {
+            const iconBg = CAT_ICON_BG[i % CAT_ICON_BG.length]
+            return (
+              <button
+                key={cat.id}
+                onClick={() => navigate(`/category/${cat.id}`)}
+                className="shrink-0 flex flex-col items-center gap-3 group w-36"
+              >
+                {/* Square card */}
+                <div className={`w-36 h-48 rounded-3xl overflow-hidden shadow-sm group-hover:shadow-lg transition-all duration-200 group-hover:scale-[1.03] ${!cat.imageUrl ? iconBg : 'bg-slate-50'}`}>
+                  {cat.imageUrl ? (
+                    <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-7xl leading-none select-none">{cat.icon || '🛒'}</span>
+                    </div>
+                  )}
+                </div>
+                {/* Name below — bold, large */}
+                <p className="font-inter text-sm font-bold text-ink text-center leading-snug line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
+                  {cat.name}
+                </p>
+              </button>
+            )
+          })
+      }
+    </div>
+  )
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const navigate    = useNavigate()
-  const [activeTab, setActiveTab] = useState<string>('All')
+  const navigate = useNavigate()
 
   const { data: heroBanners = [], isLoading: bannersLoading } = useBanners('hero')
   const { data: promoRaw   = [], isLoading: promosLoading  } = useBanners('promo')
@@ -47,34 +152,35 @@ export default function HomePage() {
     ...(BG_THEME[b.bgType] ?? DEFAULT_THEME),
   }))
 
-  // Products — All tab (filtered by active category)
-  const activeCat = categories.find(c => c.name === activeTab)
-  const { data: allData, isLoading: allLoading } = useProducts(
-    activeTab === 'All' ? { limit: 12 } : { category_id: activeCat?.id, limit: 12 }
-  )
-
-  // Homepage sections
+  // Homepage special sections
   const { data: dealData,  isLoading: dealLoading  } = useProducts({ tag: 'deal',       limit: 6 })
   const { data: bestData,  isLoading: bestLoading  } = useProducts({ tag: 'bestseller', limit: 6 })
-  const { data: freshData, isLoading: freshLoading } = useProducts({ category_name: 'Fresh', limit: 6 })
 
-  const allProducts   = allData?.products   ?? []
-  const dealProducts  = dealData?.products  ?? []
-  const bestProducts  = bestData?.products  ?? []
-  const freshProducts = freshData?.products ?? []
+  const dealProducts = dealData?.products  ?? []
+  const bestProducts = bestData?.products  ?? []
+
+  // Only root (main) categories for per-category rows
+  const mainCategories = categories.filter(c => !c.parentId)
 
   return (
     <div>
-      <div className="max-w-screen-2xl mx-auto px-12 sm:px-16 lg:px-24 py-8 space-y-12">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 py-6 space-y-10">
 
-        {/* ── Hero carousel — dynamic from admin panel ── */}
+        {/* ── Hero carousel ── */}
         {bannersLoading ? (
           <div className="w-full h-56 lg:h-64 rounded-card bg-gray-100 animate-pulse" />
         ) : heroBanners.length > 0 ? (
           <BannerCarousel banners={heroBanners} desktop />
         ) : null}
 
-        {/* ── Promo tile row — dynamic from admin panel ── */}
+        {/* ── Main categories horizontal icon bar ── */}
+        {(catsLoading || mainCategories.length > 0) && (
+          <section>
+            <MainCategoryBar categories={categories} loading={catsLoading} />
+          </section>
+        )}
+
+        {/* ── Promo tiles ── */}
         {promosLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -89,75 +195,37 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {/* ── Department tabs + product grid ── */}
-        <section>
-          <div className="flex items-center gap-0 border-b border-border mb-6 overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setActiveTab('All')}
-              className={`relative shrink-0 px-5 py-3 font-inter font-semibold text-sm whitespace-nowrap transition-colors ${
-                activeTab === 'All' ? 'text-primaryOrange' : 'text-textSecondary hover:text-ink'
-              }`}
-            >
-              All
-              {activeTab === 'All' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primaryOrange rounded-full" />}
-            </button>
-            {catsLoading
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="shrink-0 mx-3 h-4 w-16 bg-gray-100 rounded animate-pulse" />
-                ))
-              : categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveTab(cat.name)}
-                    className={`relative shrink-0 px-5 py-3 font-inter font-semibold text-sm whitespace-nowrap transition-colors ${
-                      activeTab === cat.name ? 'text-primaryOrange' : 'text-textSecondary hover:text-ink'
-                    }`}
-                  >
-                    {cat.name}
-                    {activeTab === cat.name && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primaryOrange rounded-full" />}
-                  </button>
-                ))
-            }
-          </div>
-          {allLoading
-            ? <ProductSkeleton count={12} />
-            : allProducts.length > 0
-            ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {allProducts.map((p) => <ProductCard key={p.id} product={p} />)}
-              </div>
-            ) : (
-              <p className="text-center text-textSecondary py-10 font-jakarta text-sm">No products found.</p>
-            )
-          }
-        </section>
-
         {/* ── Deal of the Day ── */}
         {(dealLoading || dealProducts.length > 0) && (
           <section>
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <h2 className="font-inter font-bold text-ink text-xl">Deal of the Day</h2>
+                <h2 className="font-inter font-bold text-ink text-xl">🔥 Deal of the Day</h2>
                 <CountdownTimer />
               </div>
               <button className="font-inter text-sm text-primaryOrange font-semibold hover:underline">
-                See all deals →
+                See all →
               </button>
             </div>
             {dealLoading
               ? <ProductSkeleton count={6} />
               : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {dealProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+                  {dealProducts.map(p => <ProductCard key={p.id} product={p} />)}
                 </div>
             }
           </section>
         )}
 
+        {/* ── Per main-category rows ── */}
+        {mainCategories.map(cat => (
+          <CategoryProductRow key={cat.id} cat={cat} />
+        ))}
+
         {/* ── Best Sellers ── */}
         {(bestLoading || bestProducts.length > 0) && (
           <section>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-inter font-bold text-ink text-xl">Best Sellers</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-inter font-bold text-ink text-xl">⭐ Best Sellers</h2>
               <button className="font-inter text-sm text-primaryOrange font-semibold hover:underline">
                 See all →
               </button>
@@ -165,28 +233,7 @@ export default function HomePage() {
             {bestLoading
               ? <ProductSkeleton count={6} />
               : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {bestProducts.map((p) => <ProductCard key={p.id} product={p} />)}
-                </div>
-            }
-          </section>
-        )}
-
-        {/* ── Fresh Deals ── */}
-        {(freshLoading || freshProducts.length > 0) && (
-          <section>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-inter font-bold text-ink text-xl">🥬 Fresh Deals</h2>
-              <button
-                onClick={() => navigate('/category?tab=Fresh')}
-                className="font-inter text-sm text-primaryOrange font-semibold hover:underline"
-              >
-                See all fresh →
-              </button>
-            </div>
-            {freshLoading
-              ? <ProductSkeleton count={6} />
-              : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {freshProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+                  {bestProducts.map(p => <ProductCard key={p.id} product={p} />)}
                 </div>
             }
           </section>

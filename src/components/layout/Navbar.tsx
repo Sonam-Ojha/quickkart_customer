@@ -4,7 +4,8 @@ import { MapPin, Search, ShoppingCart, ChevronDown, User, X, LogOut } from 'luci
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
 import { useAuthStore } from '@/store/authStore'
-import { useLocationStore } from '@/store/locationStore'
+import { useLocationStore, getLocation } from '@/store/locationStore'
+import LocationModal from '@/components/location/LocationModal'
 
 
 export default function Navbar() {
@@ -15,11 +16,11 @@ export default function Navbar() {
   const openCart  = useCartUi((s) => s.open)
   const user      = useAuthStore((s) => s.user)
   const logout    = useAuthStore((s) => s.logout)
-  const address     = useLocationStore((s) => s.address)
-  const subLabel    = useLocationStore((s) => s.subLabel)
-  const openLocation = useLocationStore((s) => s.open)
-  const [q, setQ] = useState('')
-  const [focused, setFocused] = useState(false)
+  const locationState = useLocationStore()
+  const loc           = getLocation(locationState)
+  const [locOpen, setLocOpen]     = useState(false)
+  const [q, setQ]                 = useState('')
+  const [focused, setFocused]     = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const inputRef  = useRef<HTMLInputElement>(null)
 
@@ -33,6 +34,8 @@ export default function Navbar() {
   }, [location.pathname])
 
   return (
+    <>
+    <LocationModal open={locOpen} onClose={() => setLocOpen(false)} />
     <header className="sticky top-0 z-50 bg-white">
 
       {/* ── Main navbar ── */}
@@ -52,20 +55,22 @@ export default function Navbar() {
 
           {/* Location */}
           <button
-            onClick={openLocation}
-            className="hidden lg:flex items-center gap-2.5 shrink-0 group min-w-[170px]"
+            onClick={() => setLocOpen(true)}
+            className="hidden lg:flex items-center gap-2.5 shrink-0 group min-w-[170px] hover:bg-inputFill rounded-xl px-2 py-1.5 -mx-2 transition-colors"
           >
             <div className="w-9 h-9 rounded-btn bg-orangeTint flex items-center justify-center shrink-0">
               <MapPin size={17} className="text-primaryOrange" />
             </div>
             <div className="text-left">
               <p className="font-jakarta text-xs text-muted leading-none">Deliver to</p>
-              <p className="font-inter font-bold text-ink text-sm leading-snug flex items-center gap-1 mt-0.5 truncate">
-                {address}
+              <p className="font-inter font-bold text-ink text-sm leading-snug flex items-center gap-1 mt-0.5 max-w-[140px] truncate">
+                {loc.area.split(',')[0]}
                 <ChevronDown size={12} className="text-muted mt-px shrink-0" />
               </p>
-              {subLabel && (
-                <p className="font-jakarta text-xs text-muted leading-none mt-0.5">{subLabel}</p>
+              {loc.pincode && (
+                <p className="font-jakarta text-xs text-muted leading-none mt-0.5">
+                  {loc.pincode}
+                </p>
               )}
             </div>
           </button>
@@ -168,5 +173,6 @@ export default function Navbar() {
       </div>
 
     </header>
+    </>
   )
 }

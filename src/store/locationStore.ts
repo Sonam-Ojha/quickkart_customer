@@ -1,20 +1,49 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-interface LocationState {
-  isOpen: boolean
-  address: string
-  subLabel: string
-  open: () => void
-  close: () => void
-  setAddress: (address: string, subLabel?: string) => void
+export interface SavedLocation {
+  label: string        // e.g. "Home", "Work", or area name
+  area: string         // e.g. "Sector 18, Noida"
+  pincode: string      // e.g. "201301"
+  lat?: number
+  lng?: number
 }
 
-/** Controls the delivery-location modal (open by default on first load). */
-export const useLocationStore = create<LocationState>((set) => ({
-  isOpen: true,
-  address: 'Sector 18, Noida',
-  subLabel: 'UP 201301',
-  open: () => set({ isOpen: true }),
-  close: () => set({ isOpen: false }),
-  setAddress: (address, subLabel = '') => set({ address, subLabel, isOpen: false }),
-}))
+interface LocationState {
+  current: SavedLocation | null
+  recents: SavedLocation[]
+  setLocation: (loc: SavedLocation) => void
+  clearLocation: () => void
+}
+
+const DEFAULT_LOCATION: SavedLocation = {
+  label: 'Home',
+  area: 'Sector 18, Noida',
+  pincode: '201301',
+}
+
+export const useLocationStore = create<LocationState>()(
+  persist(
+    (set, get) => ({
+      current: null,
+      recents: [],
+
+      setLocation: (loc) => {
+        const existing = get().recents.filter(
+          (r) => r.area !== loc.area || r.pincode !== loc.pincode,
+        )
+        set({
+          current: loc,
+          recents: [loc, ...existing].slice(0, 5),
+        })
+      },
+
+      clearLocation: () => set({ current: null }),
+    }),
+    { name: 'qk-location' },
+  ),
+)
+
+// Returns current location or default fallback
+export const getLocation = (state: LocationState) =>
+  state.current ?? DEFAULT_LOCATION

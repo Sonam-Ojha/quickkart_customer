@@ -4,6 +4,7 @@ import SearchBar from '@/components/ui/SearchBar'
 import { useCartStore } from '@/store/cartStore'
 import { useProducts } from '@/hooks/useProducts'
 import { useCategories } from '@/hooks/useCategories'
+import ProductImage from '@/components/ui/ProductImage'
 import type { Product } from '@/types/product'
 
 export default function FreshPage() {
@@ -96,9 +97,15 @@ function FreshProductCard({ product }: { product: Product }) {
 
   return (
     <div className="bg-cardSurface rounded-card border border-border p-2.5 flex flex-col">
-      <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-inputFill mb-2">
-        <img src={product.img} alt={product.name} className="w-full h-full object-cover" loading="lazy"
-          onError={e => { e.currentTarget.src = 'https://picsum.photos/seed/fresh/200/200' }} />
+      <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-2">
+        <ProductImage
+          src={product.img}
+          alt={product.name}
+          category={product.category}
+          className="w-full h-full"
+          imgClassName="object-contain p-2"
+          emojiSize="text-4xl"
+        />
         <span className="absolute top-1 left-1 bg-deepTeal text-white text-2xs font-inter font-bold px-1.5 py-0.5 rounded-full">
           8 mins
         </span>

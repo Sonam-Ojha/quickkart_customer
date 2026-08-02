@@ -1,205 +1,293 @@
-import { useState } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { useState, useMemo, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { SlidersHorizontal, ChevronRight, Package } from 'lucide-react'
 import ProductCard from '@/components/ui/ProductCard'
-import { useCategories } from '@/hooks/useCategories'
-import { useProducts } from '@/hooks/useProducts'
+import Breadcrumb from '@/components/ui/Breadcrumb'
+import { useCategories, useCategoryDetail, useSubCategoryProducts } from '@/hooks/useCategories'
+import type { Product } from '@/types/product'
+
+// ── Background tints cycling for root category cards ─────────────────────────
+const TINTS = [
+  'bg-orange-50  border-orange-100',
+  'bg-green-50   border-green-100',
+  'bg-blue-50    border-blue-100',
+  'bg-purple-50  border-purple-100',
+  'bg-yellow-50  border-yellow-100',
+  'bg-pink-50    border-pink-100',
+  'bg-teal-50    border-teal-100',
+  'bg-red-50     border-red-100',
+]
+
+const ICON_BG = [
+  'bg-orange-100 text-orange-600',
+  'bg-green-100  text-green-600',
+  'bg-blue-100   text-blue-600',
+  'bg-purple-100 text-purple-600',
+  'bg-yellow-100 text-yellow-600',
+  'bg-pink-100   text-pink-600',
+  'bg-teal-100   text-teal-600',
+  'bg-red-100    text-red-600',
+]
 
 const sortOptions = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Discount']
 
-function ProductSkeleton() {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="rounded-xl bg-gray-100 animate-pulse h-48" />
-      ))}
-    </div>
-  )
-}
-
-export default function CategoryPage() {
-  const [params]  = useSearchParams()
-  const [sort, setSort] = useState('Relevance')
-
-  const { data: categories = [], isLoading: catsLoading } = useCategories()
-
-  // Find selected category from URL param or default to empty
-  const tabName = params.get('tab') ?? ''
-  const [selected, setSelected] = useState<number | null>(() => {
-    if (!tabName) return null
-    return null // will be resolved once categories load
-  })
-  const [selectedName, setSelectedName] = useState(tabName)
-
-  const handleSelect = (id: number | null, name: string) => {
-    setSelected(id)
-    setSelectedName(name)
-  }
-
-  // Group into parents + children
-  const parents  = categories.filter(c => !c.parentId)
-  const children = categories.filter(c => c.parentId)
-  const getChildren = (parentId: number) => children.filter(c => c.parentId === parentId)
-
-  // Fetch products
-  const { data: productsData, isLoading: prodLoading } = useProducts({
-    category_id: selected ?? undefined,
-    limit: 48,
-  })
-
-  const raw = productsData?.products ?? []
-  const sorted = [...raw].sort((a, b) => {
+function sortProducts(products: Product[], sort: string) {
+  return [...products].sort((a, b) => {
     if (sort === 'Price: Low to High')  return a.price - b.price
     if (sort === 'Price: High to Low')  return b.price - a.price
     if (sort === 'Discount') return (b.originalPrice - b.price) - (a.originalPrice - a.price)
     return 0
   })
+}
+
+// ── Skeleton loaders ─────────────────────────────────────────────────────────
+function GridSkeleton({ count = 12 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-2xl bg-slate-100 animate-pulse h-52" />
+      ))}
+    </div>
+  )
+}
+
+// ── Root Category Grid ────────────────────────────────────────────────────────
+function RootGrid() {
+  const navigate = useNavigate()
+  const { data: allCats = [], isLoading } = useCategories()
+  const roots    = allCats.filter(c => !c.parentId)
+  const children = allCats.filter(c => c.parentId)
+  const subCount = (parentId: number) => children.filter(c => c.parentId === parentId).length
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="rounded-2xl bg-slate-100 animate-pulse h-36" />
+        ))}
+      </div>
+    )
+  }
+
+  if (!roots.length) {
+    return (
+      <div className="py-20 text-center text-textSecondary font-jakarta">
+        No categories found.
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex gap-8">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {roots.map((cat, i) => {
+        const tint   = TINTS[i % TINTS.length]
+        const iconBg = ICON_BG[i % ICON_BG.length]
+        const subs   = subCount(cat.id)
+        return (
+          <button
+            key={cat.id}
+            onClick={() => navigate(`/category/${cat.id}`)}
+            className={`relative flex flex-col gap-4 p-5 rounded-2xl border ${tint} hover:shadow-md hover:-translate-y-0.5 transition-all text-left group`}
+          >
+            {/* Icon */}
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${iconBg}`}>
+              {cat.imageUrl
+                ? <img src={cat.imageUrl} alt={cat.name} className="w-10 h-10 object-cover rounded-lg" />
+                : cat.icon || '🛒'
+              }
+            </div>
 
-        {/* ── Left sidebar ── */}
-        <aside className="hidden lg:block w-56 shrink-0">
-          <div className="bg-cardSurface rounded-2xl border border-border p-4 sticky top-28">
-            <h3 className="font-inter font-bold text-ink text-base mb-4">Categories</h3>
-
-            <button
-              onClick={() => handleSelect(null, '')}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm font-jakarta mb-1 transition-colors ${
-                !selected ? 'bg-orangeTint text-primaryOrange font-semibold' : 'text-textSecondary hover:bg-inputFill'
-              }`}
-            >
-              All Products
-            </button>
-
-            {catsLoading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-8 bg-gray-100 rounded-lg mb-1 animate-pulse" />
-              ))
-            ) : parents.length > 0 ? (
-              parents.map(parent => (
-                <div key={parent.id} className="mt-4">
-                  <p className="font-inter font-bold text-ink text-sm px-3 mb-2">
-                    {parent.icon ? `${parent.icon} ` : ''}{parent.name}
-                  </p>
-                  {getChildren(parent.id).map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleSelect(cat.id, cat.name)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-jakarta transition-colors ${
-                        selected === cat.id ? 'bg-orangeTint text-primaryOrange font-semibold' : 'text-textSecondary hover:bg-inputFill'
-                      }`}
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
-                </div>
-              ))
-            ) : (
-              categories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => handleSelect(cat.id, cat.name)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-jakarta transition-colors ${
-                    selected === cat.id ? 'bg-orangeTint text-primaryOrange font-semibold' : 'text-textSecondary hover:bg-inputFill'
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              ))
-            )}
-          </div>
-        </aside>
-
-        {/* ── Main content ── */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="font-inter font-bold text-ink text-2xl">
-              {selectedName || 'All Products'}
-              {!prodLoading && (
-                <span className="font-jakarta font-normal text-sm text-textSecondary ml-2">
-                  ({sorted.length} products)
-                </span>
+            {/* Text */}
+            <div className="flex-1">
+              <p className="font-inter font-bold text-ink text-base leading-snug">{cat.name}</p>
+              {subs > 0 && (
+                <p className="font-jakarta text-xs text-textSecondary mt-1">
+                  {subs} subcategor{subs === 1 ? 'y' : 'ies'}
+                </p>
               )}
-            </h1>
-            <div className="flex items-center gap-3">
-              <SlidersHorizontal size={16} className="text-textSecondary" />
+            </div>
+
+            {/* Arrow */}
+            <ChevronRight
+              size={16}
+              className="absolute top-5 right-4 text-textSecondary opacity-0 group-hover:opacity-100 transition-opacity"
+            />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Category Detail (with subcategory sidebar) ────────────────────────────────
+function CategoryDetail({ categoryId }: { categoryId: number }) {
+  const navigate = useNavigate()
+  // null = not yet initialized (waiting for data), will default to first sub
+  const [activeSubId, setActiveSubId] = useState<number | null>(null)
+  const [initialized, setInitialized] = useState(false)
+  const [sort, setSort] = useState('Relevance')
+
+  const { data: detail, isLoading: detailLoading } = useCategoryDetail(categoryId)
+  const { data: subData, isLoading: subLoading }   = useSubCategoryProducts(activeSubId)
+
+  const subcategories = detail?.subcategories ?? []
+  const category      = detail?.category
+
+  // Auto-select first subcategory once data loads
+  useEffect(() => {
+    if (!initialized && subcategories.length > 0) {
+      setActiveSubId(subcategories[0].id)
+      setInitialized(true)
+    }
+  }, [subcategories, initialized])
+
+  const isLoading = activeSubId ? subLoading : detailLoading
+
+  const rawProducts: Product[] = activeSubId
+    ? (subData?.products ?? [])
+    : (detail?.products ?? [])
+
+  const products = useMemo(() => sortProducts(rawProducts, sort), [rawProducts, sort])
+
+  const activeSub = subcategories.find(s => s.id === activeSubId)
+
+  return (
+    <div>
+      {/* ── Breadcrumb ── */}
+      <Breadcrumb items={[
+        { label: 'Categories', href: '/category' },
+        { label: category?.name ?? '…', href: `/category/${categoryId}` },
+        ...(activeSub ? [{ label: activeSub.name }] : []),
+      ]} />
+
+      <div className="flex gap-6 items-start">
+
+        {/* ── Sidebar: Subcategories ── */}
+        {subcategories.length > 0 && (
+          <aside className="hidden lg:block w-56 shrink-0 sticky top-28">
+            <div className="bg-white rounded-2xl border border-border overflow-hidden">
+              {/* Header */}
+              <div className="px-4 py-3 bg-slate-50 border-b border-border">
+                <p className="font-inter font-bold text-ink text-sm">
+                  {category?.icon} {category?.name}
+                </p>
+              </div>
+              {/* Subcategories */}
+              <div className="p-2">
+                {subcategories.map(sub => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setActiveSubId(sub.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-jakarta mb-0.5 transition-all text-left ${
+                      activeSubId === sub.id
+                        ? 'bg-orangeTint text-primaryOrange font-semibold'
+                        : 'text-textSecondary hover:bg-inputFill'
+                    }`}
+                  >
+                    {sub.imageUrl
+                      ? <img src={sub.imageUrl} alt={sub.name} className="w-7 h-7 rounded-lg object-cover shrink-0" />
+                      : sub.icon
+                        ? <span className="w-7 h-7 flex items-center justify-center text-base bg-slate-100 rounded-lg shrink-0">{sub.icon}</span>
+                        : <span className="w-7 h-7 rounded-lg bg-slate-100 shrink-0" />
+                    }
+                    <span className="leading-snug flex-1">{sub.name}</span>
+                    {activeSubId === sub.id && <div className="w-1.5 h-1.5 rounded-full bg-primaryOrange shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
+        )}
+
+        {/* ── Main Content ── */}
+        <div className="flex-1 min-w-0">
+          {/* Header row */}
+          <div className="flex items-center justify-between mb-5 gap-4">
+            <div>
+              <h1 className="font-inter font-bold text-ink text-2xl leading-tight">
+                {activeSubId
+                  ? subcategories.find(s => s.id === activeSubId)?.name ?? 'Products'
+                  : (category?.name ?? 'Products')
+                }
+              </h1>
+              {!isLoading && (
+                <p className="font-jakarta text-sm text-textSecondary mt-0.5">
+                  {products.length} product{products.length !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <SlidersHorizontal size={15} className="text-textSecondary" />
               <select
                 value={sort}
                 onChange={e => setSort(e.target.value)}
-                className="font-jakarta text-sm text-ink border border-border rounded-lg px-3 py-1.5 bg-white outline-none focus:border-primaryOrange"
+                className="font-jakarta text-sm text-ink border border-border rounded-xl px-3 py-2 bg-white outline-none focus:border-primaryOrange"
               >
                 {sortOptions.map(o => <option key={o}>{o}</option>)}
               </select>
             </div>
           </div>
 
-          {/* Mobile category chips */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 lg:hidden mb-4">
-            <button
-              onClick={() => handleSelect(null, '')}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-inter font-semibold border transition-colors ${
-                !selected ? 'bg-primaryOrange text-white border-primaryOrange' : 'border-border text-textSecondary bg-white'
-              }`}
-            >
-              All
-            </button>
-            {categories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => handleSelect(cat.id, cat.name)}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-inter font-semibold border transition-colors ${
-                  selected === cat.id ? 'bg-primaryOrange text-white border-primaryOrange' : 'border-border text-textSecondary bg-white'
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
+          {/* Mobile: subcategory chips */}
+          {subcategories.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 lg:hidden mb-5">
+              {subcategories.map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setActiveSubId(sub.id)}
+                  className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-inter font-semibold border transition-colors ${
+                    activeSubId === sub.id
+                      ? 'bg-primaryOrange text-white border-primaryOrange'
+                      : 'border-border text-textSecondary bg-white'
+                  }`}
+                >
+                  {sub.icon} {sub.name}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {prodLoading ? (
-            <ProductSkeleton />
-          ) : sorted.length === 0 ? (
-            !selected ? (
-              // No category selected — show category grid
-              <div className="space-y-10">
-                {(parents.length > 0 ? parents : categories).map(parent => (
-                  <section key={parent.id}>
-                    <h2 className="font-inter font-bold text-ink text-lg mb-4">
-                      {parent.icon ? `${parent.icon} ` : ''}{parent.name}
-                    </h2>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-4">
-                      {(getChildren(parent.id).length > 0 ? getChildren(parent.id) : [parent]).map(cat => (
-                        <button
-                          key={cat.id}
-                          onClick={() => handleSelect(cat.id, cat.name)}
-                          className="flex flex-col items-center gap-2 group"
-                        >
-                          <div className="w-full aspect-square rounded-xl bg-inputFill flex items-center justify-center text-2xl group-hover:bg-orangeTint transition-colors">
-                            {cat.icon ?? '🛒'}
-                          </div>
-                          <span className="font-jakarta text-xs text-textSecondary text-center leading-tight group-hover:text-primaryOrange">
-                            {cat.name}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            ) : (
-              <div className="py-20 text-center">
-                <p className="font-jakarta text-textSecondary">No products found in this category.</p>
-              </div>
-            )
+          {/* Products */}
+          {isLoading ? (
+            <GridSkeleton count={12} />
+          ) : products.length === 0 ? (
+            <div className="py-24 text-center">
+              <Package size={48} className="text-slate-200 mx-auto mb-3" />
+              <p className="font-inter font-semibold text-textSecondary">No products here yet</p>
+              <p className="font-jakarta text-sm text-muted mt-1">Check back later or try another subcategory</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {sorted.map(p => <ProductCard key={p.id} product={p} />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {products.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Page Entry ────────────────────────────────────────────────────────────────
+export default function CategoryPage() {
+  const { id } = useParams<{ id?: string }>()
+  const categoryId = id ? Number(id) : null
+
+  return (
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {categoryId ? (
+        <CategoryDetail categoryId={categoryId} />
+      ) : (
+        <>
+          <Breadcrumb items={[{ label: 'Categories' }]} />
+          <div className="mb-8">
+            <h1 className="font-inter font-bold text-ink text-3xl">Categories</h1>
+            <p className="font-jakarta text-textSecondary text-sm mt-1">
+              Browse all product categories
+            </p>
+          </div>
+          <RootGrid />
+        </>
+      )}
     </div>
   )
 }
