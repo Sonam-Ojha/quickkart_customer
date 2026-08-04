@@ -9,7 +9,7 @@ export default function InfoPage() {
 
   if (!page) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-8 py-24 text-center">
+      <div className="max-w-screen-2xl mx-auto px-8 xl:px-20 2xl:px-28 py-24 text-center">
         <p className="text-6xl mb-6">🔍</p>
         <h1 className="font-inter font-bold text-2xl text-gray-900 mb-2">Page not found</h1>
         <p className="font-jakarta text-gray-500 mb-8">This page doesn't exist.</p>

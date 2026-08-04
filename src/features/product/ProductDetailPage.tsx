@@ -42,7 +42,7 @@ export default function ProductDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex items-center justify-center">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-20 flex items-center justify-center">
         <Loader2 size={32} className="animate-spin text-primaryOrange" />
       </div>
     )
@@ -50,7 +50,7 @@ export default function ProductDetailPage() {
 
   if (isError || !product) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-20 text-center">
         <p className="font-inter text-textSecondary">Product not found.</p>
         <button onClick={() => navigate('/home')} className="mt-4 text-primaryOrange font-semibold text-sm">← Back to Home</button>
       </div>
@@ -63,7 +63,7 @@ export default function ProductDetailPage() {
     : 0
 
   return (
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-8">
 
       {/* Breadcrumb */}
       <Breadcrumb items={[

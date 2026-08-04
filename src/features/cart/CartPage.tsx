@@ -88,7 +88,7 @@ export default function CartPage() {
 
   if (itemList.length === 0 && !success) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-20 text-center">
         <div className="w-28 h-28 rounded-full bg-orangeTint flex items-center justify-center mx-auto mb-6">
           <ShoppingBag size={52} className="text-primaryOrange" />
         </div>
@@ -111,7 +111,7 @@ export default function CartPage() {
 
   if (success) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-20 text-center">
         <div className="max-w-sm mx-auto bg-cardSurface rounded-2xl border border-border p-10 shadow-card">
           <div className="w-20 h-20 bg-successBg rounded-full flex items-center justify-center mx-auto mb-5">
             <CheckCircle size={44} className="text-success" />
@@ -131,7 +131,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-8">
       <nav className="flex items-center gap-1.5 text-xs font-jakarta text-textSecondary mb-6">
         <Link to="/home" className="hover:text-primaryOrange">Home</Link>
         <ChevronRight size={12} />

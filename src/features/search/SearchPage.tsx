@@ -23,7 +23,7 @@ export default function SearchPage() {
   const results = data?.products ?? []
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-8">
       <div className="flex items-center gap-3 mb-8">
         <Search size={20} className="text-primaryOrange" />
         <h1 className="font-inter font-bold text-xl text-ink">

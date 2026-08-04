@@ -18,17 +18,7 @@ const BG_THEME: Record<string, Pick<PromoTileData, 'gradient' | 'ring' | 'accent
 }
 const DEFAULT_THEME = BG_THEME['orange-tint']
 
-// Cycling tints for category card backgrounds
-const CAT_TINTS = [
-  'bg-orange-50 border-orange-100',
-  'bg-green-50 border-green-100',
-  'bg-blue-50 border-blue-100',
-  'bg-purple-50 border-purple-100',
-  'bg-yellow-50 border-yellow-100',
-  'bg-pink-50 border-pink-100',
-  'bg-teal-50 border-teal-100',
-  'bg-red-50 border-red-100',
-]
+// Cycling tints for category icon-tile backgrounds
 const CAT_ICON_BG = [
   'bg-orange-100',
   'bg-green-100',
@@ -89,19 +79,18 @@ function CategoryProductRow({ cat }: { cat: Category }) {
   )
 }
 
-// ── Main categories horizontal bar ───────────────────────────────────────────
-function MainCategoryBar({ categories, loading }: { categories: Category[]; loading: boolean }) {
+// ── Main categories grid ─────────────────────────────────────────────────────
+function MainCategoryGrid({ categories, loading }: { categories: Category[]; loading: boolean }) {
   const navigate = useNavigate()
   const roots = categories.filter(c => !c.parentId)
 
   return (
-    <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-x-3 gap-y-6">
       {loading
-        ? Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="shrink-0 flex flex-col items-center gap-3">
-              <div className="w-36 h-48 rounded-3xl bg-slate-100 animate-pulse" />
-              <div className="w-32 h-4 rounded bg-slate-100 animate-pulse" />
-              <div className="w-24 h-4 rounded bg-slate-100 animate-pulse" />
+        ? Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-2">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-100 animate-pulse" />
+              <div className="w-14 h-3 rounded bg-slate-100 animate-pulse" />
             </div>
           ))
         : roots.map((cat, i) => {
@@ -110,20 +99,18 @@ function MainCategoryBar({ categories, loading }: { categories: Category[]; load
               <button
                 key={cat.id}
                 onClick={() => navigate(`/category/${cat.id}`)}
-                className="shrink-0 flex flex-col items-center gap-3 group w-36"
+                className="flex flex-col items-center gap-2 group"
               >
-                {/* Square card */}
-                <div className={`w-36 h-48 rounded-3xl overflow-hidden shadow-sm group-hover:shadow-lg transition-all duration-200 group-hover:scale-[1.03] ${!cat.imageUrl ? iconBg : 'bg-slate-50'}`}>
+                {/* Icon tile */}
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:scale-[1.05] ${!cat.imageUrl ? iconBg : 'bg-slate-50'}`}>
                   {cat.imageUrl ? (
                     <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-7xl leading-none select-none">{cat.icon || '🛒'}</span>
-                    </div>
+                    <span className="text-3xl sm:text-4xl leading-none select-none">{cat.icon || '🛒'}</span>
                   )}
                 </div>
-                {/* Name below — bold, large */}
-                <p className="font-inter text-sm font-bold text-ink text-center leading-snug line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
+                {/* Name below — compact, two lines */}
+                <p className="font-inter text-xs sm:text-sm font-semibold text-ink text-center leading-tight line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
                   {cat.name}
                 </p>
               </button>
@@ -164,19 +151,24 @@ export default function HomePage() {
 
   return (
     <div>
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 py-6 space-y-10">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-20 2xl:px-28 py-6 space-y-10">
 
         {/* ── Hero carousel ── */}
-        {bannersLoading ? (
-          <div className="w-full h-56 lg:h-64 rounded-card bg-gray-100 animate-pulse" />
-        ) : heroBanners.length > 0 ? (
-          <BannerCarousel banners={heroBanners} desktop />
-        ) : null}
+        {/* Horizontal inset matches the visual gap the category icons sit in
+            (icon width vs. its grid column width) so the banner's edges line
+            up with the outermost category icons, not the full grid track. */}
+        <div className="px-[calc((100%_-_36px)/8_-_32px)] sm:px-[calc((100%_-_48px)/10_-_40px)] md:px-[calc((100%_-_60px)/12_-_40px)] lg:px-[calc((100%_-_84px)/16_-_40px)] xl:px-[calc((100%_-_108px)/20_-_40px)]">
+          {bannersLoading ? (
+            <div className="w-full h-56 lg:h-64 rounded-card bg-gray-100 animate-pulse" />
+          ) : heroBanners.length > 0 ? (
+            <BannerCarousel banners={heroBanners} desktop />
+          ) : null}
+        </div>
 
-        {/* ── Main categories horizontal icon bar ── */}
+        {/* ── Main categories grid ── */}
         {(catsLoading || mainCategories.length > 0) && (
           <section>
-            <MainCategoryBar categories={categories} loading={catsLoading} />
+            <MainCategoryGrid categories={categories} loading={catsLoading} />
           </section>
         )}
 
