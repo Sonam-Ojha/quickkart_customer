@@ -3,7 +3,16 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Minus, Trash2, ShoppingBag, CheckCircle,
   Clock, ChevronRight, ShieldCheck, Phone, Mail,
+  Banknote, Smartphone, CreditCard, Wallet, Loader2,
 } from 'lucide-react'
+
+type PaymentMethod = 'cod' | 'upi' | 'card' | 'wallet'
+const PAYMENT_OPTS: { id: PaymentMethod; label: string; sub: string; icon: React.ReactNode }[] = [
+  { id: 'cod',    label: 'Cash on Delivery',     sub: 'Pay when order arrives',    icon: <Banknote size={18} className="text-green-600" /> },
+  { id: 'upi',    label: 'UPI',                  sub: 'GPay, PhonePe, Paytm',     icon: <Smartphone size={18} className="text-blue-600" /> },
+  { id: 'card',   label: 'Credit / Debit Card',  sub: 'Visa, Mastercard, RuPay',  icon: <CreditCard size={18} className="text-purple-600" /> },
+  { id: 'wallet', label: 'Wallet',               sub: 'Jhatpats wallet balance',   icon: <Wallet size={18} className="text-orange-500" /> },
+]
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
 import ProductImage from '@/components/ui/ProductImage'
@@ -35,13 +44,15 @@ export default function CartDrawer() {
   const [success, setSuccess]       = useState(false)
   const [placedTotal, setPlacedTotal] = useState(0)
   const [showAuth, setShowAuth]     = useState(false)
-  const [step, setStep]             = useState<'input' | 'otp'>('input')
+  const [step, setStep]             = useState<'input' | 'otp' | 'payment'>('input')
   const [method, setMethod]         = useState<'phone' | 'email'>('phone')
   const [phone, setPhone]           = useState('')
   const [email, setEmail]           = useState('')
   const [otp, setOtp]               = useState(['', '', '', '', '', ''])
-  const [otpSending, setOtpSending] = useState(false)
-  const [otpError, setOtpError]     = useState('')
+  const [otpSending, setOtpSending]     = useState(false)
+  const [otpError, setOtpError]         = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
+  const [placing, setPlacing]           = useState(false)
   const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollRef    = useRef<HTMLDivElement>(null)
   const closeBtnRef  = useRef<HTMLButtonElement>(null)
@@ -120,18 +131,31 @@ export default function CartDrawer() {
     setShowAuth(true)
   }
 
-  // Step 2: place the order (after phone login)
-  const placeOrder = () => {
-    if (itemList.length === 0 || success) return
-    recordOrder(itemList, grandTotal)
-    setPlacedTotal(grandTotal)
-    setShowAuth(false)
-    setSuccess(true)
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null
-      clear()
-      close()
-    }, 2500)
+  // Step 3: place the order after payment method selected
+  const placeOrder = async () => {
+    if (itemList.length === 0 || success || placing) return
+    setPlacing(true); setOtpError('')
+    try {
+      await api.post('/orders', {
+        items: itemList.map(i => ({ id: i.id, product_id: i.id, price: i.price, qty: i.qty })),
+        payment_method: paymentMethod,
+        delivery_fee:   deliveryFee,
+        handling_charge: HANDLING_CHARGE,
+      })
+      recordOrder(itemList, grandTotal)
+      setPlacedTotal(grandTotal)
+      setShowAuth(false)
+      setSuccess(true)
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null
+        clear()
+        close()
+      }, 2500)
+    } catch (e: any) {
+      setOtpError(e?.response?.data?.message ?? 'Failed to place order. Try again.')
+    } finally {
+      setPlacing(false)
+    }
   }
 
   const handleContinue = async () => {
@@ -157,12 +181,12 @@ export default function CartDrawer() {
     setOtpSending(true); setOtpError('')
     try {
       const key = method === 'phone' ? { mobile: phone } : { email }
-      await api.post('/otp/verify', { ...key, otp: otpValue })
+      const res = await api.post('/auth/otp-login', { ...key, otp: otpValue })
       setAuth(
-        { id: `U-${phone || email}`, name: 'Guest', phone: phone || '', email: email || undefined, walletBalance: 0 },
-        `token-${phone || email}`,
+        { id: res.data.user.id, name: res.data.user.name, phone: phone || '', email: res.data.user.email ?? email, walletBalance: res.data.user.walletBalance ?? 0 },
+        res.data.token,
       )
-      placeOrder()
+      setStep('payment')
     } catch (e: any) {
       setOtpError(e?.response?.data?.message ?? 'Invalid OTP')
       setOtp(['', '', '', '', '', ''])
@@ -431,7 +455,9 @@ export default function CartDrawer() {
                   <span className="text-primaryOrange">Jhat</span>
                   <span className="text-deepTeal">pats</span>
                 </span>
-                {step === 'input' ? (
+                {step === 'payment' ? (
+                  <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Select Payment</h3>
+                ) : step === 'input' ? (
                   <>
                     <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Groceries in 10 minutes</h3>
                     <p className="font-jakarta text-textSecondary text-base mt-1.5">Log in or Sign up</p>
@@ -449,7 +475,32 @@ export default function CartDrawer() {
                 )}
               </div>
 
-              {step === 'input' ? (
+              {step === 'payment' ? (
+                <>
+                  <div className="mt-4 space-y-2">
+                    {PAYMENT_OPTS.map(opt => (
+                      <button key={opt.id} onClick={() => setPaymentMethod(opt.id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors text-left ${
+                          paymentMethod === opt.id ? 'border-primaryOrange bg-orangeTint' : 'border-border hover:border-primaryOrange/50'
+                        }`}>
+                        <span className="shrink-0">{opt.icon}</span>
+                        <div className="flex-1">
+                          <p className="font-inter font-semibold text-ink text-sm">{opt.label}</p>
+                          <p className="font-jakarta text-xs text-textSecondary">{opt.sub}</p>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
+                          paymentMethod === opt.id ? 'border-primaryOrange bg-primaryOrange' : 'border-border'
+                        }`} />
+                      </button>
+                    ))}
+                  </div>
+                  {otpError && <p className="mt-2 text-sm text-red-500 text-center">{otpError}</p>}
+                  <button onClick={placeOrder} disabled={placing}
+                    className="mt-5 w-full h-14 rounded-btn font-inter font-bold text-base bg-primaryOrange text-white shadow-cta hover:bg-orangeDark transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                    {placing ? <><Loader2 size={18} className="animate-spin" /> Placing Order…</> : `Place Order · ₹${grandTotal.toFixed(0)}`}
+                  </button>
+                </>
+              ) : step === 'input' ? (
                 <>
                   {/* Method toggle */}
                   <div className="mt-6 flex bg-inputFill rounded-btn p-1">

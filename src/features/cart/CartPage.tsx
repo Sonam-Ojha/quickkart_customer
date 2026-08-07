@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Trash2, Plus, Minus, ShoppingBag, CheckCircle, ChevronRight, Tag, Loader2, Lock } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, ChevronRight, Tag, Loader2 } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
-import { useOrderStore } from '@/store/orderStore'
 import { useSettings } from '@/hooks/useSettings'
 import { useProducts } from '@/hooks/useProducts'
 import { useAuthStore } from '@/store/authStore'
@@ -15,36 +14,33 @@ export default function CartPage() {
   const navigate        = useNavigate()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
   const userEmail       = useAuthStore((s) => s.user?.email ?? '')
-  const [otpVerified, setOtpVerified]   = useState(false)
+
   const [showOtpModal, setShowOtpModal] = useState(isAuthenticated)
-  const [success, setSuccess]         = useState(false)
-  const [coupon, setCoupon]           = useState('')
+  const [coupon,         setCoupon]         = useState('')
   const [couponDiscount, setCouponDiscount] = useState(0)
-  const [couponMsg, setCouponMsg]     = useState('')
-  const [couponOk, setCouponOk]       = useState(false)
-  const [applying, setApplying]       = useState(false)
+  const [couponMsg,      setCouponMsg]      = useState('')
+  const [couponOk,       setCouponOk]       = useState(false)
+  const [applying,       setApplying]       = useState(false)
 
-  const items       = useCartStore(s => s.items)
-  const increment   = useCartStore(s => s.increment)
-  const decrement   = useCartStore(s => s.decrement)
-  const removeLine  = useCartStore(s => s.removeLine)
-  const clear       = useCartStore(s => s.clear)
-  const subtotal    = useCartStore(s => s.subtotal())
-  const mrpTotal    = useCartStore(s => s.mrpTotal())
-  const savings     = useCartStore(s => s.savings())
-  const recordOrder = useOrderStore(s => s.recordOrder)
+  const items      = useCartStore(s => s.items)
+  const increment  = useCartStore(s => s.increment)
+  const decrement  = useCartStore(s => s.decrement)
+  const removeLine = useCartStore(s => s.removeLine)
+  const subtotal   = useCartStore(s => s.subtotal())
+  const mrpTotal   = useCartStore(s => s.mrpTotal())
+  const savings    = useCartStore(s => s.savings())
 
-  const { data: settings } = useSettings()
+  const { data: settings }      = useSettings()
   const { data: suggestedData } = useProducts({ limit: 4 })
 
-  const deliveryFeeBase  = Number(settings?.delivery_fee  ?? 30)
-  const freeThreshold    = Number(settings?.free_delivery_threshold ?? 99)
-  const handlingCharge   = Number(settings?.handling_charge ?? 5)
+  const deliveryFeeBase = Number(settings?.delivery_fee            ?? 30)
+  const freeThreshold   = Number(settings?.free_delivery_threshold ?? 99)
+  const handlingCharge  = Number(settings?.handling_charge         ?? 5)
+  const deliveryFee     = subtotal >= freeThreshold ? 0 : deliveryFeeBase
+  const grandTotal      = subtotal - couponDiscount + deliveryFee + handlingCharge
 
-  const deliveryFee  = subtotal >= freeThreshold ? 0 : deliveryFeeBase
-  const grandTotal   = subtotal - couponDiscount + deliveryFee + handlingCharge
-  const itemList     = Object.values(items)
-  const suggested    = (suggestedData?.products ?? []).filter(p => !items[String(p.id)]).slice(0, 4)
+  const itemList  = Object.values(items)
+  const suggested = (suggestedData?.products ?? []).filter(p => !items[String(p.id)]).slice(0, 4)
 
   const applyCoupon = async () => {
     if (!coupon.trim()) return
@@ -59,34 +55,25 @@ export default function CartPage() {
     } finally { setApplying(false) }
   }
 
-  const handleCheckout = () => {
-    if (!isAuthenticated) {
-      navigate('/login?redirect=/cart')
-      return
-    }
-    recordOrder(itemList, grandTotal)
-    setSuccess(true)
-    setTimeout(() => { clear(); navigate('/home') }, 3000)
-  }
-
-  // Not logged in → redirect to login
+  // Not logged in → redirect
   if (!isAuthenticated) {
     navigate('/login?redirect=/cart')
     return null
   }
 
-  // OTP not yet verified → show modal
+  // Show OTP verification first
   if (showOtpModal) {
     return (
       <OtpModal
         email={userEmail}
-        onVerified={() => { setOtpVerified(true); setShowOtpModal(false) }}
+        onVerified={() => setShowOtpModal(false)}
         onClose={() => navigate(-1)}
       />
     )
   }
 
-  if (itemList.length === 0 && !success) {
+  // Empty cart
+  if (itemList.length === 0) {
     return (
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <div className="w-28 h-28 rounded-full bg-orangeTint flex items-center justify-center mx-auto mb-6">
@@ -109,27 +96,6 @@ export default function CartPage() {
     )
   }
 
-  if (success) {
-    return (
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <div className="max-w-sm mx-auto bg-cardSurface rounded-2xl border border-border p-10 shadow-card">
-          <div className="w-20 h-20 bg-successBg rounded-full flex items-center justify-center mx-auto mb-5">
-            <CheckCircle size={44} className="text-success" />
-          </div>
-          <h2 className="font-inter font-bold text-ink text-2xl mb-2">Order Placed!</h2>
-          <p className="font-jakarta text-textSecondary mb-5">
-            Delivery in <span className="text-deepTeal font-semibold">10 minutes</span>
-          </p>
-          <div className="bg-inputFill rounded-xl px-6 py-4 mb-6">
-            <p className="font-jakarta text-xs text-textSecondary">Order Total</p>
-            <p className="font-inter font-extrabold text-3xl text-ink mt-1">₹{grandTotal.toFixed(0)}</p>
-          </div>
-          <p className="font-jakarta text-xs text-muted">Redirecting to home...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <nav className="flex items-center gap-1.5 text-xs font-jakarta text-textSecondary mb-6">
@@ -143,6 +109,8 @@ export default function CartPage() {
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        {/* Left — Items */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-tealTint border border-teal-100 rounded-xl px-5 py-3 flex items-center gap-2">
             <span className="text-lg">⚡</span>
@@ -215,6 +183,7 @@ export default function CartPage() {
           )}
         </div>
 
+        {/* Right — Summary + Checkout */}
         <div className="space-y-4">
           {/* Coupon */}
           <div className="bg-cardSurface rounded-2xl border border-border p-5">
@@ -245,7 +214,7 @@ export default function CartPage() {
             )}
           </div>
 
-          {/* Bill details */}
+          {/* Bill Details */}
           <div className="bg-cardSurface rounded-2xl border border-border overflow-hidden">
             <div className="px-5 py-4 border-b border-border">
               <h3 className="font-inter font-bold text-ink text-sm">Bill Details</h3>
@@ -286,18 +255,14 @@ export default function CartPage() {
               <span className="font-inter font-bold text-ink text-lg">₹{grandTotal.toFixed(0)}</span>
             </div>
             <div className="px-5 pb-5">
-              {!isAuthenticated && (
-                <div className="mb-3 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-jakarta text-amber-700">
-                  <Lock size={13} className="shrink-0" />
-                  Checkout ke liye login karein
-                </div>
-              )}
               <button
-                onClick={handleCheckout}
+                onClick={() => navigate('/checkout')}
                 className="w-full h-12 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold text-base hover:bg-orangeDark transition-colors flex items-center justify-between px-5"
               >
-                <span>{isAuthenticated ? 'Proceed to Checkout' : 'Login to Checkout'}</span>
-                <span className="bg-orangeDark/30 px-3 py-1 rounded-btn text-sm">₹{grandTotal.toFixed(0)}</span>
+                <span>Proceed to Payment</span>
+                <span className="flex items-center gap-1">
+                  ₹{grandTotal.toFixed(0)} <ChevronRight size={16} />
+                </span>
               </button>
               {subtotal < freeThreshold && (
                 <p className="text-center font-jakarta text-xs text-textSecondary mt-3">
