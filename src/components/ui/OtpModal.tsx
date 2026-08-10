@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { Mail, ShieldCheck, X, Loader2 } from 'lucide-react'
+import { Smartphone, ShieldCheck, X, Loader2 } from 'lucide-react'
 import api from '@/lib/api'
 
 interface Props {
-  email: string
+  mobile: string
   onVerified: () => void
   onClose: () => void
 }
 
-export default function OtpModal({ email, onVerified, onClose }: Props) {
+export default function OtpModal({ mobile, onVerified, onClose }: Props) {
   const [otp, setOtp]             = useState(['', '', '', '', '', ''])
   const [sent, setSent]           = useState(false)
   const [sending, setSending]     = useState(false)
@@ -28,7 +28,7 @@ export default function OtpModal({ email, onVerified, onClose }: Props) {
   const handleSend = async () => {
     setSending(true); setError('')
     try {
-      await api.post('/otp/send', { email })
+      await api.post('/otp/send', { mobile })
       setSent(true)
       setCountdown(30)
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
@@ -59,7 +59,7 @@ export default function OtpModal({ email, onVerified, onClose }: Props) {
     if (finalOtp.length !== 6) return
     setVerifying(true); setError('')
     try {
-      await api.post('/otp/verify', { email, otp: finalOtp })
+      await api.post('/otp/verify', { mobile, otp: finalOtp })
       onVerified()
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Invalid OTP')
@@ -70,7 +70,7 @@ export default function OtpModal({ email, onVerified, onClose }: Props) {
     }
   }
 
-  const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, (_, a, b, c) => a + '*'.repeat(b.length) + c)
+  const maskedMobile = mobile ? mobile.slice(0, 2) + '******' + mobile.slice(-2) : ''
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -83,7 +83,7 @@ export default function OtpModal({ email, onVerified, onClose }: Props) {
             </div>
             <div>
               <p className="font-semibold text-gray-900 text-sm">Verify Your Account</p>
-              <p className="text-xs text-gray-500">OTP sent to {maskedEmail}</p>
+              <p className="text-xs text-gray-500">OTP sent to +91 {maskedMobile}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -94,9 +94,9 @@ export default function OtpModal({ email, onVerified, onClose }: Props) {
         <div className="px-6 pb-6 space-y-5">
           {/* Status row */}
           <div className="flex items-center gap-2 bg-orange-50 rounded-xl px-4 py-3">
-            <Mail size={16} className="text-orange-500 shrink-0" />
+            <Smartphone size={16} className="text-orange-500 shrink-0" />
             <p className="text-sm text-gray-700 flex-1">
-              {sending ? 'Sending OTP to your email…' : sent ? 'Check your email for the 6-digit OTP' : 'Preparing…'}
+              {sending ? 'Sending OTP to your mobile…' : sent ? 'Check your SMS for the 6-digit OTP' : 'Preparing…'}
             </p>
             {sending && <Loader2 size={14} className="animate-spin text-orange-500" />}
           </div>

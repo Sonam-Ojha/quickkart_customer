@@ -2,16 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Minus, Trash2, ShoppingBag, CheckCircle,
-  Clock, ChevronRight, ShieldCheck, Phone, Mail,
-  Banknote, Smartphone, CreditCard, Wallet, Loader2,
+  Clock, ChevronRight, ShieldCheck,
+  Banknote, CreditCard, Loader2,
 } from 'lucide-react'
 
-type PaymentMethod = 'cod' | 'upi' | 'card' | 'wallet'
+type PaymentMethod = 'cod' | 'razorpay'
 const PAYMENT_OPTS: { id: PaymentMethod; label: string; sub: string; icon: React.ReactNode }[] = [
-  { id: 'cod',    label: 'Cash on Delivery',     sub: 'Pay when order arrives',    icon: <Banknote size={18} className="text-green-600" /> },
-  { id: 'upi',    label: 'UPI',                  sub: 'GPay, PhonePe, Paytm',     icon: <Smartphone size={18} className="text-blue-600" /> },
-  { id: 'card',   label: 'Credit / Debit Card',  sub: 'Visa, Mastercard, RuPay',  icon: <CreditCard size={18} className="text-purple-600" /> },
-  { id: 'wallet', label: 'Wallet',               sub: 'Jhatpats wallet balance',   icon: <Wallet size={18} className="text-orange-500" /> },
+  { id: 'cod',      label: 'Cash on Delivery', sub: 'Pay when order arrives',         icon: <Banknote size={18} className="text-green-600" /> },
+  { id: 'razorpay', label: 'Pay Online',       sub: 'Cards, UPI, NetBanking & more',  icon: <CreditCard size={18} className="text-blue-600" /> },
 ]
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
@@ -41,37 +39,33 @@ export default function CartDrawer() {
   const recordOrder = useOrderStore((s) => s.recordOrder)
   const setAuth     = useAuthStore((s) => s.setAuth)
 
-  const [success, setSuccess]       = useState(false)
-  const [placedTotal, setPlacedTotal] = useState(0)
-  const [showAuth, setShowAuth]     = useState(false)
-  const [step, setStep]             = useState<'input' | 'otp' | 'payment'>('input')
-  const [method, setMethod]         = useState<'phone' | 'email'>('phone')
-  const [phone, setPhone]           = useState('')
-  const [email, setEmail]           = useState('')
-  const [otp, setOtp]               = useState(['', '', '', '', '', ''])
+  const [success, setSuccess]           = useState(false)
+  const [placedTotal, setPlacedTotal]   = useState(0)
+  const [showAuth, setShowAuth]         = useState(false)
+  const [step, setStep]                 = useState<'input' | 'otp' | 'payment'>('input')
+  const [phone, setPhone]               = useState('')
+  const [otp, setOtp]                   = useState(['', '', '', '', '', ''])
   const [otpSending, setOtpSending]     = useState(false)
   const [otpError, setOtpError]         = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [placing, setPlacing]           = useState(false)
-  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const scrollRef    = useRef<HTMLDivElement>(null)
-  const closeBtnRef  = useRef<HTMLButtonElement>(null)
+  const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollRef   = useRef<HTMLDivElement>(null)
+  const closeBtnRef = useRef<HTMLButtonElement>(null)
   const phoneInputRef = useRef<HTMLInputElement>(null)
-  const emailInputRef = useRef<HTMLInputElement>(null)
   const otpRefs = useRef<Array<HTMLInputElement | null>>([])
 
   const itemList    = Object.values(items)
   const deliveryFee = subtotal >= FREE_DELIVERY ? 0 : DELIVERY_FEE
   const grandTotal  = subtotal + deliveryFee + HANDLING_CHARGE
 
-  // Lock body scroll + close on Escape while open
   useEffect(() => {
     if (!isOpen) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (showAuth && step === 'otp') setStep('phone')
+      if (showAuth && step === 'otp') setStep('input')
       else if (showAuth) setShowAuth(false)
       else close()
     }
@@ -82,7 +76,6 @@ export default function CartDrawer() {
     }
   }, [isOpen, close, showAuth, step])
 
-  // On open: reset scroll to top + move focus into the dialog
   useEffect(() => {
     if (isOpen) {
       scrollRef.current?.scrollTo(0, 0)
@@ -90,7 +83,6 @@ export default function CartDrawer() {
     }
   }, [isOpen])
 
-  // On close: reset success/auth + cancel any pending auto-clear timer
   useEffect(() => {
     if (!isOpen) {
       setSuccess(false)
@@ -103,11 +95,9 @@ export default function CartDrawer() {
     if (showAuth) {
       setStep('input')
       setOtpError('')
-      setTimeout(() => {
-        method === 'phone' ? phoneInputRef.current?.focus() : emailInputRef.current?.focus()
-      }, 50)
+      setTimeout(() => phoneInputRef.current?.focus(), 50)
     } else {
-      setPhone(''); setEmail('')
+      setPhone('')
       setOtp(['', '', '', '', '', ''])
       setStep('input'); setOtpError('')
     }
@@ -117,54 +107,104 @@ export default function CartDrawer() {
     if (showAuth && step === 'otp') otpRefs.current[0]?.focus()
   }, [showAuth, step])
 
-  // Close the drawer on any route change (browser back/forward, in-app nav)
   useEffect(() => { close() }, [pathname, close])
-
-  // Cancel the timer if the component ever unmounts
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   const goShop = () => { close(); navigate('/home') }
 
-  // Step 1: checkout button → open the phone-login modal
   const openCheckout = () => {
     if (itemList.length === 0) return
     setShowAuth(true)
   }
 
-  // Step 3: place the order after payment method selected
+  const orderItems = itemList.map(i => ({ id: i.id, product_id: i.id, price: i.price, qty: i.qty }))
+
+  const handleOrderSuccess = () => {
+    recordOrder(itemList, grandTotal)
+    setPlacedTotal(grandTotal)
+    setShowAuth(false)
+    setSuccess(true)
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null
+      clear()
+      close()
+    }, 2500)
+  }
+
   const placeOrder = async () => {
     if (itemList.length === 0 || success || placing) return
     setPlacing(true); setOtpError('')
+
     try {
-      await api.post('/orders', {
-        items: itemList.map(i => ({ id: i.id, product_id: i.id, price: i.price, qty: i.qty })),
-        payment_method: paymentMethod,
-        delivery_fee:   deliveryFee,
-        handling_charge: HANDLING_CHARGE,
-      })
-      recordOrder(itemList, grandTotal)
-      setPlacedTotal(grandTotal)
-      setShowAuth(false)
-      setSuccess(true)
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null
-        clear()
-        close()
-      }, 2500)
+      if (paymentMethod === 'cod') {
+        // COD — place order directly
+        await api.post('/orders', {
+          items:           orderItems,
+          payment_method:  'cod',
+          delivery_fee:    deliveryFee,
+          handling_charge: HANDLING_CHARGE,
+        })
+        handleOrderSuccess()
+
+      } else {
+        // Razorpay — create order → open checkout → verify
+        const { data: rzpData } = await api.post('/payments/razorpay/create', { amount: grandTotal })
+
+        // Load Razorpay script if not already loaded
+        if (!(window as any).Razorpay) {
+          await new Promise<void>((resolve, reject) => {
+            const s = document.createElement('script')
+            s.src = 'https://checkout.razorpay.com/v1/checkout.js'
+            s.onload = () => resolve()
+            s.onerror = () => reject(new Error('Failed to load Razorpay'))
+            document.body.appendChild(s)
+          })
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          const rzp = new (window as any).Razorpay({
+            key:         rzpData.key,
+            amount:      rzpData.amount,
+            currency:    'INR',
+            name:        'Jhatpats',
+            description: 'Order Payment',
+            order_id:    rzpData.razorpay_order_id,
+            handler: async (response: any) => {
+              try {
+                await api.post('/payments/razorpay/verify', {
+                  razorpay_order_id:   response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature:  response.razorpay_signature,
+                  items:               orderItems,
+                  delivery_fee:        deliveryFee,
+                  handling_charge:     HANDLING_CHARGE,
+                })
+                handleOrderSuccess()
+                resolve()
+              } catch (err: any) {
+                reject(new Error(err?.response?.data?.message ?? 'Payment verification failed'))
+              }
+            },
+            modal: {
+              ondismiss: () => reject(new Error('Payment cancelled')),
+            },
+            theme: { color: '#f97316' },
+          })
+          rzp.open()
+        })
+      }
     } catch (e: any) {
-      setOtpError(e?.response?.data?.message ?? 'Failed to place order. Try again.')
+      setOtpError(e?.message ?? 'Failed to place order. Try again.')
     } finally {
       setPlacing(false)
     }
   }
 
   const handleContinue = async () => {
-    if (method === 'phone' && phone.length !== 10) return
-    if (method === 'email' && !email.includes('@')) return
+    if (phone.length !== 10) return
     setOtpSending(true); setOtpError('')
     try {
-      const payload = method === 'phone' ? { mobile: phone } : { email }
-      await api.post('/otp/send', payload)
+      await api.post('/otp/send', { mobile: phone })
       setOtp(['', '', '', '', '', ''])
       setStep('otp')
     } catch (e: any) {
@@ -180,10 +220,9 @@ export default function CartDrawer() {
     if (otpValue.length !== 6) return
     setOtpSending(true); setOtpError('')
     try {
-      const key = method === 'phone' ? { mobile: phone } : { email }
-      const res = await api.post('/auth/otp-login', { ...key, otp: otpValue })
+      const res = await api.post('/auth/otp-login', { mobile: phone, otp: otpValue })
       setAuth(
-        { id: res.data.user.id, name: res.data.user.name, phone: phone || '', email: res.data.user.email ?? email, walletBalance: res.data.user.walletBalance ?? 0 },
+        { id: res.data.user.id, name: res.data.user.name, phone, mobile: phone, walletBalance: res.data.user.walletBalance ?? 0 },
         res.data.token,
       )
       setStep('payment')
@@ -244,7 +283,7 @@ export default function CartDrawer() {
           )}
         </div>
 
-        {/* ── Success state ── */}
+        {/* Success state */}
         {success ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
             <div className="w-20 h-20 bg-successBg rounded-full flex items-center justify-center mb-5">
@@ -260,7 +299,7 @@ export default function CartDrawer() {
             </div>
           </div>
         ) : itemList.length === 0 ? (
-          /* ── Empty state ── */
+          /* Empty state */
           <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
             <div className="w-24 h-24 rounded-full bg-orangeTint flex items-center justify-center mb-6">
               <ShoppingBag size={46} className="text-primaryOrange" />
@@ -278,10 +317,7 @@ export default function CartDrawer() {
           </div>
         ) : (
           <>
-            {/* Scrollable content */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
-
-              {/* Savings strip */}
               {savings > 0 && (
                 <div className="flex items-center justify-between bg-successBg rounded-card px-4 py-2.5">
                   <span className="font-inter font-semibold text-success text-sm">Your total savings</span>
@@ -289,7 +325,6 @@ export default function CartDrawer() {
                 </div>
               )}
 
-              {/* Delivery banner + items */}
               <div className="bg-cardSurface rounded-card border border-border overflow-hidden">
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
                   <div className="w-9 h-9 rounded-full bg-tealTint flex items-center justify-center shrink-0">
@@ -304,10 +339,7 @@ export default function CartDrawer() {
                 </div>
 
                 {itemList.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className={`flex items-center gap-3 px-4 py-3 ${idx < itemList.length - 1 ? 'border-b border-border' : ''}`}
-                  >
+                  <div key={item.id} className={`flex items-center gap-3 px-4 py-3 ${idx < itemList.length - 1 ? 'border-b border-border' : ''}`}>
                     <ProductImage
                       src={item.img}
                       alt={item.name}
@@ -326,38 +358,25 @@ export default function CartDrawer() {
                         )}
                       </div>
                     </div>
-
-                    {/* Stepper */}
                     <div className="flex items-center bg-primaryOrange rounded-btn h-8 shrink-0">
-                      <button
-                        onClick={() => decrement(item.id)}
-                        aria-label="Decrease quantity"
-                        className="w-7 h-8 flex items-center justify-center text-white hover:bg-orangeDark rounded-l-btn transition-colors"
-                      >
+                      <button onClick={() => decrement(item.id)} aria-label="Decrease quantity"
+                        className="w-7 h-8 flex items-center justify-center text-white hover:bg-orangeDark rounded-l-btn transition-colors">
                         <Minus size={13} strokeWidth={3} />
                       </button>
                       <span className="font-inter font-bold text-white text-sm w-6 text-center">{item.qty}</span>
-                      <button
-                        onClick={() => increment(item.id)}
-                        aria-label="Increase quantity"
-                        className="w-7 h-8 flex items-center justify-center text-white hover:bg-orangeDark rounded-r-btn transition-colors"
-                      >
+                      <button onClick={() => increment(item.id)} aria-label="Increase quantity"
+                        className="w-7 h-8 flex items-center justify-center text-white hover:bg-orangeDark rounded-r-btn transition-colors">
                         <Plus size={13} strokeWidth={3} />
                       </button>
                     </div>
-
-                    <button
-                      onClick={() => removeLine(item.id)}
-                      aria-label="Remove item"
-                      className="text-muted hover:text-error transition-colors shrink-0"
-                    >
+                    <button onClick={() => removeLine(item.id)} aria-label="Remove item"
+                      className="text-muted hover:text-error transition-colors shrink-0">
                       <Trash2 size={15} />
                     </button>
                   </div>
                 ))}
               </div>
 
-              {/* Bill details */}
               <div className="bg-cardSurface rounded-card border border-border overflow-hidden">
                 <div className="px-4 py-3 border-b border-border">
                   <h3 className="font-inter font-bold text-ink text-sm">Bill details</h3>
@@ -399,7 +418,6 @@ export default function CartDrawer() {
                 </p>
               )}
 
-              {/* Cancellation policy */}
               <div className="bg-cardSurface rounded-card border border-border px-4 py-3">
                 <p className="font-inter font-bold text-ink text-sm mb-1">Cancellation Policy</p>
                 <p className="font-jakarta text-xs text-muted leading-relaxed">
@@ -433,7 +451,7 @@ export default function CartDrawer() {
         )}
       </aside>
 
-      {/* ── Phone-login modal (Jhatpats branding) ── */}
+      {/* Mobile login modal */}
       {showAuth && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => setShowAuth(false)} />
@@ -442,7 +460,7 @@ export default function CartDrawer() {
             <div className="px-10 pt-4 pb-5">
               <div className="relative flex flex-col items-center text-center">
                 <button
-                  onClick={() => { if (step === 'otp') setStep('phone'); else setShowAuth(false) }}
+                  onClick={() => { if (step === 'otp') setStep('input'); else setShowAuth(false) }}
                   aria-label="Back"
                   className="absolute left-0 top-3.5 w-9 h-9 flex items-center justify-center rounded-full hover:bg-inputFill transition-colors"
                 >
@@ -455,6 +473,7 @@ export default function CartDrawer() {
                   <span className="text-primaryOrange">Jhat</span>
                   <span className="text-deepTeal">pats</span>
                 </span>
+
                 {step === 'payment' ? (
                   <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Select Payment</h3>
                 ) : step === 'input' ? (
@@ -464,9 +483,9 @@ export default function CartDrawer() {
                   </>
                 ) : (
                   <>
-                    <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Verify your {method === 'phone' ? 'number' : 'email'}</h3>
+                    <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Verify your number</h3>
                     <p className="font-jakarta text-textSecondary text-base mt-1.5">
-                      OTP sent to {method === 'phone' ? `+91 ${phone}` : email}{' '}
+                      OTP sent to +91 {phone}{' '}
                       <button onClick={() => setStep('input')} className="text-primaryOrange font-semibold hover:underline">
                         Change
                       </button>
@@ -475,6 +494,7 @@ export default function CartDrawer() {
                 )}
               </div>
 
+              {/* Payment step */}
               {step === 'payment' ? (
                 <>
                   <div className="mt-4 space-y-2">
@@ -500,62 +520,37 @@ export default function CartDrawer() {
                     {placing ? <><Loader2 size={18} className="animate-spin" /> Placing Order…</> : `Place Order · ₹${grandTotal.toFixed(0)}`}
                   </button>
                 </>
-              ) : step === 'input' ? (
-                <>
-                  {/* Method toggle */}
-                  <div className="mt-6 flex bg-inputFill rounded-btn p-1">
-                    {(['phone', 'email'] as const).map((m) => (
-                      <button key={m} onClick={() => setMethod(m)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-inter font-semibold text-sm transition-all ${
-                          method === m ? 'bg-white text-ink shadow-sm' : 'text-textSecondary hover:text-ink'
-                        }`}>
-                        {m === 'phone' ? <Phone size={14} /> : <Mail size={14} />}
-                        {m === 'phone' ? 'Mobile' : 'Email'}
-                      </button>
-                    ))}
-                  </div>
 
-                  {/* Input */}
-                  {method === 'phone' ? (
-                    <div className="mt-4 flex items-center h-14 bg-white border border-border rounded-btn px-4 focus-within:border-primaryOrange focus-within:ring-2 focus-within:ring-primaryOrange/15 transition-all">
-                      <span className="font-inter font-bold text-ink text-base">+91</span>
-                      <span className="w-px h-6 bg-border mx-3.5" />
-                      <input ref={phoneInputRef} value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleContinue() }}
-                        inputMode="numeric" placeholder="Enter mobile number"
-                        className="flex-1 min-w-0 bg-transparent font-jakarta text-base text-ink placeholder:text-muted outline-none border-none"
-                      />
-                    </div>
-                  ) : (
-                    <div className="mt-4 flex items-center h-14 bg-white border border-border rounded-btn px-4 focus-within:border-primaryOrange focus-within:ring-2 focus-within:ring-primaryOrange/15 transition-all">
-                      <Mail size={16} className="text-muted shrink-0" />
-                      <span className="w-px h-6 bg-border mx-3.5" />
-                      <input ref={emailInputRef} value={email} type="email"
-                        onChange={(e) => setEmail(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleContinue() }}
-                        placeholder="Enter email address"
-                        className="flex-1 min-w-0 bg-transparent font-jakarta text-base text-ink placeholder:text-muted outline-none border-none"
-                      />
-                    </div>
-                  )}
+              ) : step === 'input' ? (
+                /* Mobile number input */
+                <>
+                  <div className="mt-6 flex items-center h-14 bg-white border border-border rounded-btn px-4 focus-within:border-primaryOrange focus-within:ring-2 focus-within:ring-primaryOrange/15 transition-all">
+                    <span className="font-inter font-bold text-ink text-base">+91</span>
+                    <span className="w-px h-6 bg-border mx-3.5" />
+                    <input ref={phoneInputRef} value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleContinue() }}
+                      inputMode="numeric" placeholder="Enter mobile number"
+                      className="flex-1 min-w-0 bg-transparent font-jakarta text-base text-ink placeholder:text-muted outline-none border-none"
+                    />
+                  </div>
 
                   {otpError && <p className="mt-2 text-sm text-red-500 text-center">{otpError}</p>}
 
-                  {/* Continue */}
                   <button onClick={handleContinue}
-                    disabled={otpSending || (method === 'phone' ? phone.length !== 10 : !email.includes('@'))}
+                    disabled={otpSending || phone.length !== 10}
                     className={`mt-5 w-full h-14 rounded-btn font-inter font-bold text-base transition-colors ${
-                      !otpSending && (method === 'phone' ? phone.length === 10 : email.includes('@'))
+                      !otpSending && phone.length === 10
                         ? 'bg-primaryOrange text-white shadow-cta hover:bg-orangeDark'
                         : 'bg-muted text-white cursor-not-allowed'
                     }`}>
                     {otpSending ? 'Sending OTP…' : 'Continue'}
                   </button>
                 </>
+
               ) : (
+                /* OTP boxes */
                 <>
-                  {/* OTP boxes */}
                   <div className="mt-8 flex justify-between gap-2">
                     {otp.map((d, i) => (
                       <input
@@ -589,7 +584,6 @@ export default function CartDrawer() {
 
                   {otpError && <p className="mt-2 text-sm text-red-500 text-center">{otpError}</p>}
 
-                  {/* Verify */}
                   <button onClick={handleVerify}
                     disabled={otpValue.length !== 6 || otpSending}
                     className={`mt-5 w-full h-14 rounded-btn font-inter font-bold text-base transition-colors ${
@@ -600,7 +594,6 @@ export default function CartDrawer() {
                     {otpSending ? 'Verifying…' : 'Verify & Continue'}
                   </button>
 
-                  {/* Resend */}
                   <p className="mt-4 text-center font-jakarta text-sm text-textSecondary">
                     Didn&apos;t receive the code?{' '}
                     <button onClick={handleContinue} disabled={otpSending}
@@ -612,7 +605,6 @@ export default function CartDrawer() {
               )}
             </div>
 
-            {/* Terms footer */}
             <div className="border-t border-border px-10 py-4 text-center">
               <p className="font-jakarta text-13 text-muted">
                 By continuing, you agree to our{' '}

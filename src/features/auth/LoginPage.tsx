@@ -18,18 +18,16 @@ export default function LoginPage() {
   const [error, setError] = useState('')
 
   // OTP login state
-  const [otpContact, setOtpContact]   = useState('')
-  const [otpMethod, setOtpMethod]     = useState<'mobile' | 'email'>('mobile')
-  const [otpStep, setOtpStep]         = useState<'input' | 'verify'>('input')
-  const [otpDigits, setOtpDigits]     = useState('')
-  const [otpSending, setOtpSending]   = useState(false)
+  const [otpContact, setOtpContact] = useState('')
+  const [otpStep, setOtpStep]       = useState<'input' | 'verify'>('input')
+  const [otpDigits, setOtpDigits]   = useState('')
+  const [otpSending, setOtpSending] = useState(false)
 
   const handleSendOtp = async () => {
     if (!otpContact.trim()) return
     setOtpSending(true); setError('')
     try {
-      const payload = otpMethod === 'mobile' ? { mobile: otpContact } : { email: otpContact }
-      await api.post('/otp/send', payload)
+      await api.post('/otp/send', { mobile: otpContact })
       setOtpStep('verify')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to send OTP')
@@ -40,10 +38,7 @@ export default function LoginPage() {
     if (otpDigits.length !== 6) return
     setLoading(true); setError('')
     try {
-      const payload = otpMethod === 'mobile'
-        ? { mobile: otpContact, otp: otpDigits }
-        : { email: otpContact, otp: otpDigits }
-      const { data } = await api.post('/auth/otp-login', payload)
+      const { data } = await api.post('/auth/otp-login', { mobile: otpContact, otp: otpDigits })
       setAuth(data.user, data.token)
       navigate(redirectTo)
     } catch (e: any) {
@@ -161,22 +156,14 @@ export default function LoginPage() {
               )}
               {otpStep === 'input' ? (
                 <>
-                  <div className="flex bg-inputFill rounded-lg p-1">
-                    {(['mobile','email'] as const).map(m => (
-                      <button key={m} onClick={() => setOtpMethod(m)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-semibold transition-all ${
-                          otpMethod === m ? 'bg-white text-ink shadow-sm' : 'text-textSecondary'
-                        }`}>
-                        {m === 'mobile' ? <Phone size={13}/> : <Mail size={13}/>}
-                        {m === 'mobile' ? 'Mobile' : 'Email'}
-                      </button>
-                    ))}
+                  <div className="relative">
+                    <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                    <input type="tel" maxLength={10}
+                      placeholder="Enter 10-digit mobile number"
+                      value={otpContact} onChange={e => setOtpContact(e.target.value.replace(/\D/g,'').slice(0,10))}
+                      className="w-full h-12 bg-inputFill border border-border rounded-btn pl-10 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                    />
                   </div>
-                  <input type={otpMethod === 'email' ? 'email' : 'tel'}
-                    placeholder={otpMethod === 'mobile' ? '10-digit mobile number' : 'your@email.com'}
-                    value={otpContact} onChange={e => setOtpContact(e.target.value)}
-                    className="w-full h-12 bg-inputFill border border-border rounded-btn px-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
-                  />
                   <button onClick={handleSendOtp} disabled={otpSending || !otpContact.trim()}
                     className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-btn flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
                     {otpSending ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <><ArrowRight size={16}/> Send OTP</>}
