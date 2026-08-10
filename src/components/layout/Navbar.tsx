@@ -40,7 +40,7 @@ export default function Navbar() {
 
       {/* ── Main navbar ── */}
       <div className="bg-white border-b border-border">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center gap-6">
+        <div className="px-4 sm:px-6 lg:px-8 h-20 flex items-center gap-6">
 
           {/* Logo */}
           <Link to="/home" className="shrink-0 leading-none">

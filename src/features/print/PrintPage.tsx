@@ -40,7 +40,7 @@ export default function PrintPage() {
 
   if (success) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-20 text-center">
         <div className="max-w-sm mx-auto bg-cardSurface rounded-2xl border border-border p-10 shadow-card">
           <div className="w-20 h-20 bg-successBg rounded-full flex items-center justify-center mx-auto mb-5">
             <CheckCircle size={44} className="text-success" />
@@ -68,7 +68,7 @@ export default function PrintPage() {
     <div>
       {/* Hero */}
       <div className="bg-gradient-to-r from-primaryOrange to-orangeDark text-white">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-14 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-14 flex items-center justify-between">
           <div>
             <div className="inline-flex items-center gap-2 bg-accentYellow/20 border border-accentYellow/40 rounded-full px-3 py-1 mb-4">
               <Clock size={13} className="text-accentYellow" />
@@ -86,7 +86,7 @@ export default function PrintPage() {
         </div>
       </div>
 
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-28 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
           {/* ── Left: Upload + Config ── */}
