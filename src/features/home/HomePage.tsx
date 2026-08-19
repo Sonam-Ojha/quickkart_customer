@@ -18,6 +18,11 @@ const BG_THEME: Record<string, Pick<PromoTileData, 'gradient' | 'ring' | 'accent
 }
 const DEFAULT_THEME = BG_THEME['orange-tint']
 
+// Horizontally-scrolling product row: card width is sized so N full cards show
+// plus a peek of the next one, signalling the row scrolls for more.
+const SCROLL_ROW  = "flex gap-4 overflow-x-auto pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+const SCROLL_ITEM = "shrink-0 snap-start w-[calc((100%-2rem)/2.5)] sm:w-[calc((100%-3rem)/3.5)] md:w-[calc((100%-4rem)/4.5)] lg:w-[calc((100%-5rem)/5.5)] xl:w-[calc((100%-6rem)/6.5)]"
+
 // Cycling tints for category icon-tile backgrounds
 const CAT_ICON_BG = [
   'bg-orange-100',
@@ -30,11 +35,11 @@ const CAT_ICON_BG = [
   'bg-red-100',
 ]
 
-function ProductSkeleton({ count = 6 }: { count?: number }) {
+function ProductSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+    <div className={SCROLL_ROW}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="rounded-xl bg-gray-100 animate-pulse h-52" />
+        <div key={i} className={`${SCROLL_ITEM} rounded-xl bg-gray-100 animate-pulse h-52`} />
       ))}
     </div>
   )
@@ -44,7 +49,7 @@ function ProductSkeleton({ count = 6 }: { count?: number }) {
 function CategoryProductRow({ cat }: { cat: Category }) {
   const navigate = useNavigate()
   const { data: detail, isLoading } = useCategoryDetail(cat.id)
-  const products = (detail?.products ?? []).slice(0, 6)
+  const products = (detail?.products ?? []).slice(0, 8)
 
   if (!isLoading && products.length === 0) return null
 
@@ -68,10 +73,10 @@ function CategoryProductRow({ cat }: { cat: Category }) {
         </button>
       </div>
       {isLoading
-        ? <ProductSkeleton count={6} />
+        ? <ProductSkeleton count={8} />
         : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {products.map(p => <ProductCard key={p.id} product={p} />)}
+          <div className={SCROLL_ROW}>
+            {products.map(p => <div key={p.id} className={SCROLL_ITEM}><ProductCard product={p} /></div>)}
           </div>
         )
       }
@@ -140,14 +145,15 @@ export default function HomePage() {
   }))
 
   // Homepage special sections
-  const { data: dealData,  isLoading: dealLoading  } = useProducts({ tag: 'deal',       limit: 6 })
-  const { data: bestData,  isLoading: bestLoading  } = useProducts({ tag: 'bestseller', limit: 6 })
+  const { data: dealData,  isLoading: dealLoading  } = useProducts({ tag: 'deal',       limit: 8 })
+  const { data: bestData,  isLoading: bestLoading  } = useProducts({ tag: 'bestseller', limit: 8 })
 
   const dealProducts = dealData?.products  ?? []
   const bestProducts = bestData?.products  ?? []
 
-  // Only root (main) categories for per-category rows
-  const mainCategories = categories.filter(c => !c.parentId)
+  // Only root (main) categories for per-category rows — capped so total homepage
+  // sections (Deal of the Day + category rows + Best Sellers) come to 7
+  const mainCategories = categories.filter(c => !c.parentId).slice(0, 5)
 
   return (
     <div>
@@ -200,9 +206,9 @@ export default function HomePage() {
               </button>
             </div>
             {dealLoading
-              ? <ProductSkeleton count={6} />
-              : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {dealProducts.map(p => <ProductCard key={p.id} product={p} />)}
+              ? <ProductSkeleton count={8} />
+              : <div className={SCROLL_ROW}>
+                  {dealProducts.map(p => <div key={p.id} className={SCROLL_ITEM}><ProductCard product={p} /></div>)}
                 </div>
             }
           </section>
@@ -223,9 +229,9 @@ export default function HomePage() {
               </button>
             </div>
             {bestLoading
-              ? <ProductSkeleton count={6} />
-              : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {bestProducts.map(p => <ProductCard key={p.id} product={p} />)}
+              ? <ProductSkeleton count={8} />
+              : <div className={SCROLL_ROW}>
+                  {bestProducts.map(p => <div key={p.id} className={SCROLL_ITEM}><ProductCard product={p} /></div>)}
                 </div>
             }
           </section>

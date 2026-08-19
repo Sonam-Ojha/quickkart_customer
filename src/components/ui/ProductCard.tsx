@@ -37,16 +37,16 @@ export default function ProductCard({ product }: Props) {
   const bgColor = catColors[product.category ?? 'default'] ?? catColors.default
 
   return (
-    <div className="bg-cardSurface rounded-card border border-border shadow-card flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden group">
+    <div className="h-full bg-cardSurface rounded-card border border-border/50 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col overflow-hidden">
 
       {/* Image */}
-      <div className="relative w-full aspect-square overflow-hidden cursor-pointer group-hover:scale-105 transition-transform duration-300">
+      <div className="relative w-full aspect-square overflow-hidden cursor-pointer">
         <ProductImage
           src={product.img}
           alt={product.name}
           category={product.category}
           className="w-full h-full"
-          imgClassName="object-contain p-3"
+          imgClassName="object-contain p-5 pb-0"
           emojiSize="text-5xl"
           onClick={() => navigate(`/product/${product.id}`)}
         />
