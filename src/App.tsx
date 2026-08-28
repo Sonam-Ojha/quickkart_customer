@@ -9,6 +9,8 @@ import PrintPage from '@/features/print/PrintPage'
 import SearchPage from '@/features/search/SearchPage'
 import LoginPage from '@/features/auth/LoginPage'
 import InfoPage from '@/features/info/InfoPage'
+import OrdersPage from '@/features/orders/OrdersPage'
+import OrderTrackingPage from '@/features/orders/OrderTrackingPage'
 
 export default function App() {
   return (
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="/search"          element={<SearchPage />} />
           <Route path="/print"           element={<PrintPage />} />
           <Route path="/cart"            element={<CartPage />} />
+          <Route path="/orders"          element={<OrdersPage />} />
+          <Route path="/orders/:id"      element={<OrderTrackingPage />} />
           <Route path="/info/:slug"      element={<InfoPage />} />
         </Route>
       </Routes>

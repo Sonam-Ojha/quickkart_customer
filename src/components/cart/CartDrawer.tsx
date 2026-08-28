@@ -119,7 +119,7 @@ export default function CartDrawer() {
 
   const orderItems = itemList.map(i => ({ id: i.id, product_id: i.id, price: i.price, qty: i.qty }))
 
-  const handleOrderSuccess = () => {
+  const handleOrderSuccess = (orderId?: number) => {
     recordOrder(itemList, grandTotal)
     setPlacedTotal(grandTotal)
     setShowAuth(false)
@@ -128,7 +128,8 @@ export default function CartDrawer() {
       timerRef.current = null
       clear()
       close()
-    }, 2500)
+      if (orderId) navigate(`/orders/${orderId}`)
+    }, 1800)
   }
 
   const placeOrder = async () => {
@@ -137,14 +138,13 @@ export default function CartDrawer() {
 
     try {
       if (paymentMethod === 'cod') {
-        // COD — place order directly
-        await api.post('/orders', {
+        const { data: placed } = await api.post('/orders', {
           items:           orderItems,
           payment_method:  'cod',
           delivery_fee:    deliveryFee,
           handling_charge: HANDLING_CHARGE,
         })
-        handleOrderSuccess()
+        handleOrderSuccess(placed?.id)
 
       } else {
         // Razorpay — create order → open checkout → verify
@@ -171,7 +171,7 @@ export default function CartDrawer() {
             order_id:    rzpData.razorpay_order_id,
             handler: async (response: any) => {
               try {
-                await api.post('/payments/razorpay/verify', {
+                const { data: verified } = await api.post('/payments/razorpay/verify', {
                   razorpay_order_id:   response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature:  response.razorpay_signature,
@@ -179,7 +179,7 @@ export default function CartDrawer() {
                   delivery_fee:        deliveryFee,
                   handling_charge:     HANDLING_CHARGE,
                 })
-                handleOrderSuccess()
+                handleOrderSuccess(verified?.id)
                 resolve()
               } catch (err: any) {
                 reject(new Error(err?.response?.data?.message ?? 'Payment verification failed'))

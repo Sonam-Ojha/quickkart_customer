@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { MapPin, Search, ShoppingCart, ChevronDown, User, X, LogOut } from 'lucide-react'
+import { MapPin, Search, ShoppingCart, ShoppingBag, ChevronDown, User, X, LogOut } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
 import { useAuthStore } from '@/store/authStore'
@@ -131,6 +131,13 @@ export default function Navbar() {
                       <p className="font-inter font-semibold text-sm text-ink truncate">{user.name}</p>
                       <p className="font-jakarta text-xs text-muted">{user.phone}</p>
                     </div>
+                    <Link
+                      to="/orders"
+                      onClick={() => setProfileOpen(false)}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-jakarta text-ink hover:bg-inputFill transition-colors"
+                    >
+                      <ShoppingBag size={14} /> My Orders
+                    </Link>
                     <button
                       onClick={() => { logout(); setProfileOpen(false) }}
                       className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-jakarta text-red-500 hover:bg-red-50 transition-colors"

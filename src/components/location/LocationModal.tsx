@@ -1,445 +1,388 @@
-import 'leaflet/dist/leaflet.css'
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet'
-import L from 'leaflet'
+import { useState, useEffect, useRef } from 'react'
 import {
   MapPin, Navigation, Search, X, Clock, ChevronRight,
-  Loader2, AlertCircle, ArrowLeft, CheckCircle2,
+  Loader2, AlertCircle, CheckCircle2, Wifi, RotateCcw,
 } from 'lucide-react'
 import { useLocationStore, SavedLocation } from '@/store/locationStore'
+import { useGeoLocation, GPS_ACCURACY_GOOD_M } from '@/hooks/useGeoLocation'
 
-// Fix leaflet default icon broken by webpack/vite
-delete (L.Icon.Default.prototype as any)._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
+const API_BASE = import.meta.env.VITE_API_BASE_URL as string
+const GKEY     = import.meta.env.VITE_GOOGLE_MAPS_KEY as string
 
-interface Props {
-  open: boolean
-  onClose: () => void
+// ── Google Maps / Places loader ───────────────────────────────────────────────
+let _mapsReady: Promise<void> | null = null
+function ensureMaps(): Promise<void> {
+  if ((window as any).google?.maps?.places) return Promise.resolve()
+  if (_mapsReady) return _mapsReady
+  _mapsReady = new Promise<void>((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${GKEY}&libraries=places&language=en&region=IN`
+    s.async = true
+    s.onload  = () => resolve()
+    s.onerror = () => { _mapsReady = null; reject() }
+    document.head.appendChild(s)
+  })
+  return _mapsReady
 }
 
-// ── Nominatim helpers ─────────────────────────────────────────────────────────
+// ── Google Places autocomplete ────────────────────────────────────────────────
+interface Prediction { placeId: string; mainText: string; secondaryText: string }
 
-const NOM_HEADERS = { 'Accept-Language': 'en', 'User-Agent': 'JhatpatsWeb/1.0' }
-
-async function nominatimSearch(query: string): Promise<SavedLocation[]> {
-  const url =
-    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' India')}` +
-    `&format=json&addressdetails=1&limit=6&countrycodes=in`
-  const res  = await fetch(url, { headers: NOM_HEADERS })
-  const data: any[] = await res.json()
-  return data.map((item) => {
-    const addr = item.address ?? {}
-    const area = [
-      addr.suburb || addr.neighbourhood || addr.road || addr.town,
-      addr.city   || addr.county,
-      addr.state,
-    ].filter(Boolean).join(', ')
-    return {
-      label:   addr.suburb || addr.neighbourhood || addr.city || item.display_name.split(',')[0],
-      area:    area || item.display_name.split(',').slice(0, 3).join(', '),
-      pincode: addr.postcode ?? '',
-      lat:     parseFloat(item.lat),
-      lng:     parseFloat(item.lon),
-    }
+async function googleSearch(q: string): Promise<Prediction[]> {
+  await ensureMaps()
+  const g = (window as any).google
+  return new Promise((resolve) => {
+    new g.maps.places.AutocompleteService().getPlacePredictions(
+      { input: q, componentRestrictions: { country: 'in' }, types: ['geocode', 'establishment'] },
+      (preds: any[] | null, status: string) => {
+        if (status !== 'OK' || !preds) return resolve([])
+        resolve(preds.map((p: any) => ({
+          placeId:       p.place_id,
+          mainText:      p.structured_formatting?.main_text ?? p.description?.split(',')[0] ?? '',
+          secondaryText: p.structured_formatting?.secondary_text ?? '',
+        })))
+      },
+    )
   })
 }
 
-async function nominatimReverse(lat: number, lng: number): Promise<SavedLocation | null> {
+async function googlePlaceCoords(placeId: string): Promise<{ lat: number; lng: number } | null> {
+  await ensureMaps()
+  const g = (window as any).google
+  return new Promise((resolve) => {
+    new g.maps.places.PlacesService(document.createElement('div')).getDetails(
+      { placeId, fields: ['geometry'] },
+      (place: any, status: string) => {
+        if (status !== 'OK' || !place?.geometry?.location) return resolve(null)
+        resolve({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() })
+      },
+    )
+  })
+}
+
+// ── Backend reverse geocode (free, Nominatim proxy) ───────────────────────────
+interface AddrResult {
+  locality: string; area: string; city: string
+  state: string; postalCode: string; country: string; formattedAddress: string
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<AddrResult | null> {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`
-    const res  = await fetch(url, { headers: NOM_HEADERS })
-    const data = await res.json()
-    const addr = data.address ?? {}
-    const area = [
-      addr.suburb || addr.neighbourhood || addr.road,
-      addr.city   || addr.town || addr.county,
-    ].filter(Boolean).join(', ')
-    return {
-      label:   addr.suburb || addr.neighbourhood || addr.road || 'My Location',
-      area:    area || data.display_name?.split(',').slice(0, 3).join(', ') || '',
-      pincode: addr.postcode ?? '',
-      lat,
-      lng,
-    }
-  } catch {
-    return null
+    const res = await fetch(`${API_BASE}/api/app/location/reverse?lat=${lat}&lng=${lng}`,
+      { signal: AbortSignal.timeout(10000) })
+    return res.ok ? (await res.json()) as AddrResult : null
+  } catch { return null }
+}
+
+function toSavedLocation(
+  addr: AddrResult | null,
+  lat: number, lng: number,
+  accuracy?: number,
+  fallbackLabel?: string,
+): SavedLocation {
+  if (!addr) {
+    return { label: fallbackLabel || 'My Location', area: '', pincode: '', lat, lng, accuracy, source: 'gps' }
+  }
+  return {
+    label:           addr.locality || addr.city || 'My Location',
+    area:            addr.area || addr.city || '',
+    pincode:         addr.postalCode,
+    lat, lng, accuracy,
+    city:            addr.city,
+    state:           addr.state,
+    country:         addr.country,
+    formattedAddress: addr.formattedAddress,
+    source:          'gps',
   }
 }
 
-// ── Map sub-components ────────────────────────────────────────────────────────
-
-function MapCenterSetter({ center }: { center: [number, number] }) {
-  const map = useMap()
-  useEffect(() => { map.setView(center, 16) }, [center, map])
-  return null
-}
-
-function MapMoveListener({ onMoveEnd }: { onMoveEnd: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    moveend(e) {
-      const c = e.target.getCenter()
-      onMoveEnd(c.lat, c.lng)
-    },
-  })
-  return null
-}
-
-// ── Main modal ────────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
+interface Props { open: boolean; onClose: () => void }
 
 export default function LocationModal({ open, onClose }: Props) {
   const { current, recents, setLocation } = useLocationStore()
+  const { status: gpsStatus, request: requestGps, reset: resetGps } = useGeoLocation()
 
-  // view: 'search' = search/recent list  |  'map' = draggable map
-  const [view,        setView]        = useState<'search' | 'map'>('search')
-  const [query,       setQuery]       = useState('')
-  const [results,     setResults]     = useState<SavedLocation[]>([])
-  const [searching,   setSearching]   = useState(false)
-  const [gpsState,    setGpsState]    = useState<'idle' | 'loading' | 'error'>('idle')
-  const [gpsError,    setGpsError]    = useState('')
-  const [mapCenter,   setMapCenter]   = useState<[number, number]>([28.6139, 77.209]) // Delhi default
-  const [mapAddr,     setMapAddr]     = useState<SavedLocation | null>(null)
-  const [addrLoading, setAddrLoading] = useState(false)
+  const [query,        setQuery]       = useState('')
+  const [predictions,  setPredictions] = useState<Prediction[]>([])
+  const [searching,    setSearching]   = useState(false)
+  // When GPS/search gives coords, show a confirmation card before saving
+  const [pending,      setPending]     = useState<SavedLocation | null>(null)
+  const [pendingLoading, setPendingLoading] = useState(false)
 
-  const inputRef    = useRef<HTMLInputElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const revDebRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const debRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Reset on open
   useEffect(() => {
     if (open) {
-      setView('search')
-      setQuery('')
-      setResults([])
-      setGpsState('idle')
-      setGpsError('')
-      setMapAddr(null)
+      setQuery(''); setPredictions([]); setPending(null); setPendingLoading(false)
+      resetGps()
+      ensureMaps().catch(() => {})
       setTimeout(() => inputRef.current?.focus(), 100)
     }
-  }, [open])
+  }, [open, resetGps])
 
-  // Debounced search
+  // GPS success → reverse geocode → show confirmation card
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (query.trim().length < 3) { setResults([]); return }
-    debounceRef.current = setTimeout(async () => {
+    if (gpsStatus.kind !== 'success') return
+    const { coords } = gpsStatus
+    setPendingLoading(true)
+    setPending({ label: 'Detecting…', area: '', pincode: '', lat: coords.lat, lng: coords.lng, accuracy: coords.accuracy, source: 'gps' })
+    reverseGeocode(coords.lat, coords.lng).then((addr) => {
+      setPending(toSavedLocation(addr, coords.lat, coords.lng, coords.accuracy))
+      setPendingLoading(false)
+    })
+  }, [gpsStatus])
+
+  // Debounced Google Places search
+  useEffect(() => {
+    if (debRef.current) clearTimeout(debRef.current)
+    if (query.trim().length < 3) { setPredictions([]); return }
+    debRef.current = setTimeout(async () => {
       setSearching(true)
-      try { setResults(await nominatimSearch(query)) }
-      catch { setResults([]) }
-      finally { setSearching(false) }
+      setPredictions(await googleSearch(query))
+      setSearching(false)
     }, 400)
   }, [query])
 
-  // Go to map at given coords
-  const openMap = useCallback(async (lat: number, lng: number, preAddr?: SavedLocation) => {
-    setMapCenter([lat, lng])
-    setView('map')
-    if (preAddr) {
-      setMapAddr(preAddr)
-    } else {
-      setAddrLoading(true)
-      const addr = await nominatimReverse(lat, lng)
-      setMapAddr(addr)
-      setAddrLoading(false)
-    }
-  }, [])
-
-  // Map pan ended → reverse geocode (debounced 600ms)
-  const handleMapMoveEnd = useCallback((lat: number, lng: number) => {
-    setMapCenter([lat, lng])
-    if (revDebRef.current) clearTimeout(revDebRef.current)
-    setAddrLoading(true)
-    revDebRef.current = setTimeout(async () => {
-      const addr = await nominatimReverse(lat, lng)
-      setMapAddr(addr)
-      setAddrLoading(false)
-    }, 600)
-  }, [])
-
-  // GPS
-  const handleGps = () => {
-    if (!navigator.geolocation) {
-      setGpsError('GPS not supported in this browser')
-      return
-    }
-    setGpsState('loading')
-    setGpsError('')
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords
-        setGpsState('idle')
-        await openMap(lat, lng)
-      },
-      (err) => {
-        setGpsState('error')
-        setGpsError(
-          err.code === 1
-            ? 'Location permission denied. Allow in browser settings.'
-            : 'Could not get GPS. Try manual search.',
-        )
-      },
-      { timeout: 10000 },
-    )
+  // Search result tapped → get coords → reverse geocode → show card
+  const handlePredictionSelect = async (pred: Prediction) => {
+    setSearching(true); setPredictions([])
+    const coords = await googlePlaceCoords(pred.placeId)
+    if (!coords) { setSearching(false); return }
+    setPending({ label: pred.mainText, area: pred.secondaryText, pincode: '', lat: coords.lat, lng: coords.lng, source: 'search' })
+    setPendingLoading(true); setSearching(false)
+    reverseGeocode(coords.lat, coords.lng).then((addr) => {
+      setPending(toSavedLocation(addr, coords.lat, coords.lng, undefined, pred.mainText))
+      setPendingLoading(false)
+    })
   }
 
-  // Search result tapped
-  const handleSelect = async (loc: SavedLocation) => {
-    if (loc.lat && loc.lng) {
-      await openMap(loc.lat, loc.lng, loc)
-    } else {
-      setLocation(loc)
-      onClose()
-    }
-  }
-
-  // Confirm location from map
   const handleConfirm = () => {
-    if (!mapAddr) return
-    setLocation(mapAddr)
+    if (!pending) return
+    setLocation({ ...pending, capturedAt: Date.now() })
+    onClose()
+  }
+
+  const handleRecentSelect = (loc: SavedLocation) => {
+    setLocation({ ...loc, capturedAt: Date.now() })
     onClose()
   }
 
   if (!open) return null
 
+  const showConfirmCard = !!pending || gpsStatus.kind === 'requesting' || gpsStatus.kind === 'improving'
+
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center pt-10 sm:pt-16 px-4">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal */}
       <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
            style={{ maxHeight: 'calc(100vh - 5rem)' }}>
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border shrink-0">
-          {view === 'map' && (
-            <button
-              onClick={() => setView('search')}
-              className="w-8 h-8 rounded-full hover:bg-inputFill flex items-center justify-center transition-colors shrink-0"
-            >
-              <ArrowLeft size={16} className="text-ink" />
-            </button>
-          )}
-          <div className="flex items-center gap-2.5 flex-1">
-            <div className="w-8 h-8 bg-orangeTint rounded-lg flex items-center justify-center shrink-0">
-              <MapPin size={16} className="text-primaryOrange" />
-            </div>
-            <div>
-              <p className="font-inter font-bold text-ink text-sm leading-none">
-                {view === 'map' ? 'Confirm your location' : 'Set delivery location'}
-              </p>
-              {view === 'search' && current && (
-                <p className="font-jakarta text-xs text-muted mt-0.5">Current: {current.area}</p>
-              )}
-              {view === 'map' && (
-                <p className="font-jakarta text-xs text-muted mt-0.5">Pan map to pin exact spot</p>
-              )}
-            </div>
+          <div className="w-8 h-8 bg-orangeTint rounded-lg flex items-center justify-center shrink-0">
+            <MapPin size={16} className="text-primaryOrange" />
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-inputFill flex items-center justify-center transition-colors shrink-0"
-          >
+          <div className="flex-1">
+            <p className="font-inter font-bold text-ink text-sm leading-none">Set delivery location</p>
+            {current?.area && (
+              <p className="font-jakarta text-xs text-muted mt-0.5 truncate max-w-[260px]">{current.area}</p>
+            )}
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-inputFill flex items-center justify-center transition-colors">
             <X size={16} className="text-muted" />
           </button>
         </div>
 
-        {/* ── SEARCH VIEW ── */}
-        {view === 'search' && (
-          <div className="p-4 space-y-3 overflow-y-auto flex-1">
-            {/* GPS button */}
-            <button
-              onClick={handleGps}
-              disabled={gpsState === 'loading'}
-              className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-primaryOrange/20 bg-orangeTint hover:bg-orange-100 transition-colors disabled:opacity-60 group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-primaryOrange flex items-center justify-center shrink-0">
-                {gpsState === 'loading'
-                  ? <Loader2 size={18} className="text-white animate-spin" />
-                  : <Navigation size={18} className="text-white" />
-                }
-              </div>
-              <div className="text-left flex-1">
-                <p className="font-inter font-semibold text-ink text-sm">
-                  {gpsState === 'loading' ? 'Detecting location…' : 'Use my current location'}
-                </p>
-                <p className="font-jakarta text-xs text-muted">Auto-detect via GPS</p>
-              </div>
-              {gpsState !== 'loading' && (
-                <ChevronRight size={16} className="text-muted group-hover:text-primaryOrange transition-colors" />
-              )}
-            </button>
+        <div className="p-4 space-y-3 overflow-y-auto flex-1">
 
-            {gpsError && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-lg">
-                <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
-                <p className="font-jakarta text-xs text-red-600">{gpsError}</p>
-              </div>
-            )}
-
-            {/* Search box */}
-            <div className="relative">
-              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search area, pincode or city…"
-                className="w-full h-11 bg-inputFill border border-border rounded-btn pl-10 pr-10 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
-              />
-              {searching
-                ? <Loader2 size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted animate-spin" />
-                : query && (
-                    <button onClick={() => { setQuery(''); setResults([]) }}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2">
-                      <X size={14} className="text-muted hover:text-ink" />
-                    </button>
-                  )
-              }
-            </div>
-
-            {/* Search results */}
-            {results.length > 0 && (
-              <div className="space-y-0.5">
-                <p className="font-inter font-semibold text-xs text-muted px-1 pb-1">SEARCH RESULTS</p>
-                {results.map((loc, i) => (
-                  <LocationRow key={i} loc={loc}
-                    icon={<MapPin size={15} className="text-primaryOrange" />}
-                    onClick={() => handleSelect(loc)} />
-                ))}
-              </div>
-            )}
-
-            {/* Recents */}
-            {query.trim().length === 0 && recents.length > 0 && (
-              <div className="space-y-0.5">
-                <p className="font-inter font-semibold text-xs text-muted px-1 pb-1">RECENT LOCATIONS</p>
-                {recents.map((loc, i) => (
-                  <LocationRow key={i} loc={loc}
-                    icon={<Clock size={15} className="text-muted" />}
-                    onClick={() => handleSelect(loc)} />
-                ))}
-              </div>
-            )}
-
-            {/* Empty state */}
-            {query.trim().length >= 3 && !searching && results.length === 0 && (
-              <div className="py-8 text-center">
-                <MapPin size={32} className="text-border mx-auto mb-2" />
-                <p className="font-jakarta text-sm text-muted">No results for "{query}"</p>
-                <p className="font-jakarta text-xs text-muted/70 mt-1">Try a different area name or pincode</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── MAP VIEW ── */}
-        {view === 'map' && (
-          <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
-            {/* Map container */}
-            <div className="relative flex-1" style={{ minHeight: 300 }}>
-              <MapContainer
-                center={mapCenter}
-                zoom={16}
-                style={{ height: '100%', width: '100%', minHeight: 300 }}
-                zoomControl={true}
-                attributionControl={false}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; OpenStreetMap contributors'
-                />
-                <MapCenterSetter center={mapCenter} />
-                <MapMoveListener onMoveEnd={handleMapMoveEnd} />
-              </MapContainer>
-
-              {/* Center pin overlay */}
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-[1000]">
-                <div className="relative -translate-y-1/2">
-                  {/* Pin shadow */}
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-1.5 bg-black/20 rounded-full blur-[2px]" />
-                  {/* Pin icon */}
-                  <div className="w-10 h-10 bg-primaryOrange rounded-full flex items-center justify-center shadow-lg border-2 border-white">
-                    <MapPin size={20} className="text-white" />
-                  </div>
-                  {/* Pin stem */}
-                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-primaryOrange" />
-                </div>
-              </div>
-
-              {/* Attribution */}
-              <div className="absolute bottom-1 right-1 z-[1000] text-[9px] text-gray-500 bg-white/80 px-1 rounded">
-                © OpenStreetMap
-              </div>
-            </div>
-
-            {/* Address bar + confirm */}
-            <div className="p-4 border-t border-border bg-white shrink-0">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="w-9 h-9 bg-orangeTint rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                  <MapPin size={16} className="text-primaryOrange" />
+          {/* ── Confirmation card (GPS or search result) ── */}
+          {showConfirmCard && (
+            <div className="rounded-xl border-2 border-primaryOrange/30 bg-orangeTint overflow-hidden">
+              <div className="px-4 py-3 flex items-start gap-3">
+                <div className="w-9 h-9 bg-primaryOrange rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                  {pendingLoading || gpsStatus.kind === 'requesting' || gpsStatus.kind === 'improving'
+                    ? <Loader2 size={18} className="text-white animate-spin" />
+                    : <MapPin size={18} className="text-white" />
+                  }
                 </div>
                 <div className="flex-1 min-w-0">
-                  {addrLoading ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 size={14} className="text-muted animate-spin" />
-                      <span className="font-jakarta text-sm text-muted">Fetching address…</span>
-                    </div>
-                  ) : mapAddr ? (
+                  {gpsStatus.kind === 'requesting' && (
                     <>
-                      <p className="font-inter font-bold text-ink text-sm leading-snug truncate">{mapAddr.label}</p>
-                      <p className="font-jakarta text-xs text-muted mt-0.5 line-clamp-2">{mapAddr.area}</p>
-                      {mapAddr.pincode && (
-                        <p className="font-jakarta text-xs text-muted mt-0.5">PIN: {mapAddr.pincode}</p>
+                      <p className="font-inter font-semibold text-ink text-sm">Detecting location…</p>
+                      <p className="font-jakarta text-xs text-muted">Waiting for GPS signal</p>
+                    </>
+                  )}
+                  {gpsStatus.kind === 'improving' && (
+                    <>
+                      <p className="font-inter font-semibold text-ink text-sm">Getting precise location…</p>
+                      <p className="font-jakarta text-xs text-muted">Accuracy: ~{gpsStatus.accuracy}m — improving…</p>
+                    </>
+                  )}
+                  {gpsStatus.kind === 'success' && pending && (
+                    <>
+                      <p className="font-inter font-bold text-ink text-sm truncate">
+                        {pendingLoading ? 'Getting address…' : pending.label}
+                      </p>
+                      {!pendingLoading && pending.area && (
+                        <p className="font-jakarta text-xs text-muted mt-0.5 line-clamp-2">{pending.area}</p>
+                      )}
+                      <div className="flex gap-2 mt-1 flex-wrap">
+                        {pending.pincode && (
+                          <span className="text-xs font-jakarta text-muted bg-white px-1.5 py-0.5 rounded">
+                            PIN {pending.pincode}
+                          </span>
+                        )}
+                        {pending.accuracy !== undefined && (
+                          <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-jakarta ${
+                            pending.accuracy <= GPS_ACCURACY_GOOD_M ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            <Wifi size={9} />~{pending.accuracy}m
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  {pending && !pendingLoading && gpsStatus.kind !== 'requesting' && gpsStatus.kind !== 'improving' && pending.source === 'search' && (
+                    <>
+                      <p className="font-inter font-bold text-ink text-sm truncate">{pending.label}</p>
+                      {pending.area && <p className="font-jakarta text-xs text-muted mt-0.5 line-clamp-2">{pending.area}</p>}
+                      {pending.pincode && (
+                        <span className="text-xs font-jakarta text-muted">PIN {pending.pincode}</span>
                       )}
                     </>
-                  ) : (
-                    <p className="font-jakarta text-sm text-muted">Pan the map to your location</p>
                   )}
                 </div>
+                {/* Change button */}
+                {pending && !pendingLoading && (
+                  <button
+                    onClick={() => { setPending(null); resetGps() }}
+                    className="shrink-0 text-primaryOrange hover:text-orange-700 transition-colors"
+                    title="Change"
+                  >
+                    <RotateCcw size={15} />
+                  </button>
+                )}
               </div>
 
-              <button
-                onClick={handleConfirm}
-                disabled={!mapAddr || addrLoading}
-                className="w-full h-11 bg-primaryOrange hover:bg-orange-600 disabled:bg-orange-300 text-white rounded-btn font-inter font-bold text-sm flex items-center justify-center gap-2 transition-colors"
-              >
-                <CheckCircle2 size={16} />
-                Confirm Location
-              </button>
+              {/* Confirm button */}
+              {pending && !pendingLoading && (
+                <button
+                  onClick={handleConfirm}
+                  className="w-full h-11 bg-primaryOrange hover:bg-orange-600 text-white font-inter font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+                >
+                  <CheckCircle2 size={16} />
+                  Confirm this location
+                </button>
+              )}
             </div>
+          )}
+
+          {/* ── GPS button ── */}
+          {!showConfirmCard && (
+            <button
+              onClick={requestGps}
+              className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-primaryOrange/20 bg-orangeTint hover:bg-orange-100 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-primaryOrange flex items-center justify-center shrink-0">
+                <Navigation size={18} className="text-white" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-inter font-semibold text-ink text-sm">Use my current location</p>
+                <p className="font-jakarta text-xs text-muted">Auto-detect via GPS</p>
+              </div>
+              <ChevronRight size={16} className="text-muted group-hover:text-primaryOrange transition-colors" />
+            </button>
+          )}
+
+          {/* GPS error */}
+          {gpsStatus.kind === 'error' && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
+              <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-jakarta text-xs text-red-700 leading-relaxed">{gpsStatus.message}</p>
+                <button onClick={requestGps} className="font-inter font-semibold text-xs text-primaryOrange mt-1 hover:underline">
+                  Try again
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Search box ── */}
+          <div className="relative">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search area, street, pincode…"
+              className="w-full h-11 bg-inputFill border border-border rounded-btn pl-10 pr-10 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+            />
+            {searching
+              ? <Loader2 size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted animate-spin" />
+              : query && (
+                  <button onClick={() => { setQuery(''); setPredictions([]) }} className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                    <X size={14} className="text-muted hover:text-ink" />
+                  </button>
+                )
+            }
           </div>
-        )}
+
+          {/* Search predictions */}
+          {predictions.length > 0 && (
+            <div className="space-y-0.5">
+              <p className="font-inter font-semibold text-xs text-muted px-1 pb-1">SUGGESTIONS</p>
+              {predictions.map((pred) => (
+                <button key={pred.placeId} onClick={() => handlePredictionSelect(pred)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-inputFill transition-colors text-left group">
+                  <div className="w-8 h-8 rounded-lg bg-inputFill group-hover:bg-white flex items-center justify-center shrink-0 transition-colors">
+                    <MapPin size={15} className="text-primaryOrange" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-inter font-semibold text-ink text-sm truncate">{pred.mainText}</p>
+                    <p className="font-jakarta text-xs text-muted truncate">{pred.secondaryText}</p>
+                  </div>
+                  <ChevronRight size={14} className="text-muted shrink-0 group-hover:text-primaryOrange transition-colors" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* No results */}
+          {query.trim().length >= 3 && !searching && predictions.length === 0 && (
+            <div className="py-6 text-center">
+              <MapPin size={28} className="text-border mx-auto mb-2" />
+              <p className="font-jakarta text-sm text-muted">No results for "{query}"</p>
+              <p className="font-jakarta text-xs text-muted/70 mt-1">Try a different area, city, or pincode</p>
+            </div>
+          )}
+
+          {/* Recents */}
+          {query.trim().length === 0 && recents.length > 0 && !showConfirmCard && (
+            <div className="space-y-0.5">
+              <p className="font-inter font-semibold text-xs text-muted px-1 pb-1">RECENT</p>
+              {recents.map((loc, i) => (
+                <button key={i} onClick={() => handleRecentSelect(loc)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-inputFill transition-colors text-left group">
+                  <div className="w-8 h-8 rounded-lg bg-inputFill group-hover:bg-white flex items-center justify-center shrink-0 transition-colors">
+                    <Clock size={15} className="text-muted" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-inter font-semibold text-ink text-sm truncate">{loc.label}</p>
+                    <p className="font-jakarta text-xs text-muted truncate">
+                      {loc.area}{loc.pincode ? ` · ${loc.pincode}` : ''}
+                    </p>
+                  </div>
+                  <ChevronRight size={14} className="text-muted shrink-0 group-hover:text-primaryOrange transition-colors" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  )
-}
-
-function LocationRow({
-  loc, icon, onClick,
-}: {
-  loc: SavedLocation
-  icon: React.ReactNode
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-inputFill transition-colors text-left group"
-    >
-      <div className="w-8 h-8 rounded-lg bg-inputFill group-hover:bg-white flex items-center justify-center shrink-0 transition-colors">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-inter font-semibold text-ink text-sm truncate">{loc.label}</p>
-        <p className="font-jakarta text-xs text-muted truncate">
-          {loc.area}{loc.pincode ? ` · ${loc.pincode}` : ''}
-        </p>
-      </div>
-      <ChevronRight size={14} className="text-muted shrink-0 group-hover:text-primaryOrange transition-colors" />
-    </button>
   )
 }
