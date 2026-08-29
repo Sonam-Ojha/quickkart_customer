@@ -96,12 +96,13 @@ function toSavedLocation(
   lat: number, lng: number,
   accuracy?: number,
   fallbackLabel?: string,
+  source: SavedLocation['source'] = 'gps',
 ): SavedLocation {
   if (!addr) {
-    return { label: fallbackLabel || 'My Location', area: '', pincode: '', lat, lng, accuracy, source: 'gps' }
+    return { label: fallbackLabel || 'My Location', area: fallbackLabel ? '' : '', pincode: '', lat, lng, accuracy, source }
   }
   return {
-    label:           addr.locality || addr.city || 'My Location',
+    label:           addr.locality || addr.city || fallbackLabel || 'My Location',
     area:            addr.area || addr.city || '',
     pincode:         addr.postalCode,
     lat, lng, accuracy,
@@ -109,7 +110,7 @@ function toSavedLocation(
     state:           addr.state,
     country:         addr.country,
     formattedAddress: addr.formattedAddress,
-    source:          'gps',
+    source,
   }
 }
 
@@ -205,7 +206,7 @@ export default function LocationModal({ open, onClose }: Props) {
     setPending({ label: pred.mainText, area: pred.secondaryText, pincode: '', lat: coords.lat, lng: coords.lng, source: 'search' })
     setPendingLoading(true); setSearching(false)
     reverseGeocode(coords.lat, coords.lng).then((addr) => {
-      setPending(toSavedLocation(addr, coords.lat, coords.lng, undefined, pred.mainText))
+      setPending(toSavedLocation(addr, coords.lat, coords.lng, undefined, pred.mainText, 'search'))
       setPendingLoading(false)
     })
   }
@@ -273,7 +274,7 @@ export default function LocationModal({ open, onClose }: Props) {
                       <p className="font-jakarta text-xs text-muted">Accuracy: ~{gpsStatus.accuracy}m — improving…</p>
                     </>
                   )}
-                  {gpsStatus.kind === 'success' && pending && (
+                  {pending && gpsStatus.kind !== 'requesting' && gpsStatus.kind !== 'improving' && (
                     <>
                       <p className="font-inter font-bold text-ink text-sm truncate">
                         {pendingLoading ? 'Getting address…' : pending.label}
@@ -281,28 +282,21 @@ export default function LocationModal({ open, onClose }: Props) {
                       {!pendingLoading && pending.area && (
                         <p className="font-jakarta text-xs text-muted mt-0.5 line-clamp-2">{pending.area}</p>
                       )}
-                      <div className="flex gap-2 mt-1 flex-wrap">
-                        {pending.pincode && (
-                          <span className="text-xs font-jakarta text-muted bg-white px-1.5 py-0.5 rounded">
-                            PIN {pending.pincode}
-                          </span>
-                        )}
-                        {pending.accuracy !== undefined && (
-                          <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-jakarta ${
-                            pending.accuracy <= GPS_ACCURACY_GOOD_M ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            <Wifi size={9} />~{pending.accuracy}m
-                          </span>
-                        )}
-                      </div>
-                    </>
-                  )}
-                  {pending && !pendingLoading && gpsStatus.kind !== 'requesting' && gpsStatus.kind !== 'improving' && pending.source === 'search' && (
-                    <>
-                      <p className="font-inter font-bold text-ink text-sm truncate">{pending.label}</p>
-                      {pending.area && <p className="font-jakarta text-xs text-muted mt-0.5 line-clamp-2">{pending.area}</p>}
-                      {pending.pincode && (
-                        <span className="text-xs font-jakarta text-muted">PIN {pending.pincode}</span>
+                      {!pendingLoading && (
+                        <div className="flex gap-2 mt-1 flex-wrap">
+                          {pending.pincode && (
+                            <span className="text-xs font-jakarta text-muted bg-white px-1.5 py-0.5 rounded">
+                              PIN {pending.pincode}
+                            </span>
+                          )}
+                          {pending.accuracy !== undefined && (
+                            <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-jakarta ${
+                              pending.accuracy <= GPS_ACCURACY_GOOD_M ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              <Wifi size={9} />~{pending.accuracy}m
+                            </span>
+                          )}
+                        </div>
                       )}
                     </>
                   )}
