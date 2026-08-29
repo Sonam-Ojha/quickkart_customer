@@ -26,15 +26,30 @@ function ensureMaps(): Promise<void> {
 }
 
 // ── Google Places autocomplete ────────────────────────────────────────────────
-interface Prediction { placeId: string; mainText: string; secondaryText: string }
+interface Prediction {
+  placeId: string; mainText: string; secondaryText: string
+  _lat?: number; _lng?: number; _addr?: any  // set for Nominatim fallback results
+}
 
 async function googleSearch(q: string): Promise<Prediction[]> {
-  await ensureMaps()
+  try {
+    await ensureMaps()
+  } catch {
+    console.warn('[LocationModal] Google Maps script failed to load')
+    return []
+  }
   const g = (window as any).google
+  if (!g?.maps?.places) {
+    console.warn('[LocationModal] google.maps.places not available')
+    return []
+  }
+
+  // AutocompleteService (works with Places API that is already enabled)
   return new Promise((resolve) => {
     new g.maps.places.AutocompleteService().getPlacePredictions(
       { input: q, componentRestrictions: { country: 'in' }, types: ['geocode', 'establishment'] },
       (preds: any[] | null, status: string) => {
+        console.log('[Places] status:', status, '| results:', preds?.length ?? 0)
         if (status !== 'OK' || !preds) return resolve([])
         resolve(preds.map((p: any) => ({
           placeId:       p.place_id,
@@ -47,7 +62,9 @@ async function googleSearch(q: string): Promise<Prediction[]> {
 }
 
 async function googlePlaceCoords(placeId: string): Promise<{ lat: number; lng: number } | null> {
-  await ensureMaps()
+  try {
+    await ensureMaps()
+  } catch { return null }
   const g = (window as any).google
   return new Promise((resolve) => {
     new g.maps.places.PlacesService(document.createElement('div')).getDetails(
@@ -135,13 +152,37 @@ export default function LocationModal({ open, onClose }: Props) {
     })
   }, [gpsStatus])
 
-  // Debounced Google Places search
+  // Debounced search: Google Places first, fallback to backend Nominatim
   useEffect(() => {
     if (debRef.current) clearTimeout(debRef.current)
     if (query.trim().length < 3) { setPredictions([]); return }
     debRef.current = setTimeout(async () => {
       setSearching(true)
-      setPredictions(await googleSearch(query))
+      try {
+        let results = await googleSearch(query)
+        if (results.length === 0) {
+          // Fallback: backend Nominatim search
+          const res = await fetch(`${API_BASE}/api/app/location/search?q=${encodeURIComponent(query)}`,
+            { signal: AbortSignal.timeout(8000) })
+          if (res.ok) {
+            const data = await res.json()
+            const nominatimResults: Prediction[] = (data.results || []).map((r: any, i: number) => ({
+              placeId: `nominatim-${i}-${r.lat}-${r.lng}`,
+              mainText: r.area?.split(',')[0] || r.city || query,
+              secondaryText: r.area || '',
+              _lat: r.lat,
+              _lng: r.lng,
+              _addr: r,
+            }))
+            results = nominatimResults
+            console.log('[Search] Nominatim fallback results:', results.length)
+          }
+        }
+        setPredictions(results)
+      } catch (e) {
+        console.error('[Search] error:', e)
+        setPredictions([])
+      }
       setSearching(false)
     }, 400)
   }, [query])
@@ -149,6 +190,16 @@ export default function LocationModal({ open, onClose }: Props) {
   // Search result tapped → get coords → reverse geocode → show card
   const handlePredictionSelect = async (pred: Prediction) => {
     setSearching(true); setPredictions([])
+
+    // Nominatim fallback results already have coords embedded
+    if (pred.placeId.startsWith('nominatim-') && pred._lat !== undefined && pred._lng !== undefined) {
+      const { _lat: lat, _lng: lng, _addr: addr } = pred
+      setPending(toSavedLocation(addr, lat, lng, undefined, pred.mainText))
+      setSearching(false)
+      return
+    }
+
+    // Google Places: fetch coords via PlacesService
     const coords = await googlePlaceCoords(pred.placeId)
     if (!coords) { setSearching(false); return }
     setPending({ label: pred.mainText, area: pred.secondaryText, pincode: '', lat: coords.lat, lng: coords.lng, source: 'search' })
