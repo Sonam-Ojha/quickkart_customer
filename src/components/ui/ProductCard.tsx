@@ -15,12 +15,6 @@ const badgeConfig = {
   new:        { label: 'NEW',         bg: 'bg-deepTeal text-white'    },
 }
 
-const catColors: Record<string, string> = {
-  Fresh:     '#DCFCE7', Dairy:     '#FEF9C3',
-  Snacks:    '#FEE2E2', Beverages: '#DBEAFE',
-  Bakery:    '#FEF3C7', Beauty:    '#FCE7F3',
-  Staples:   '#F0FDF4', default:   '#F5F5F4',
-}
 
 
 export default function ProductCard({ product }: Props) {
@@ -34,8 +28,6 @@ export default function ProductCard({ product }: Props) {
   const disc    = product.originalPrice > product.price
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0
-  const bgColor = catColors[product.category ?? 'default'] ?? catColors.default
-
   return (
     <div className="h-full bg-cardSurface rounded-card border border-border/50 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col overflow-hidden">
 

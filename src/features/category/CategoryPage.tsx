@@ -121,7 +121,6 @@ function RootGrid() {
 
 // ── Category Detail (with subcategory sidebar) ────────────────────────────────
 function CategoryDetail({ categoryId }: { categoryId: number }) {
-  const navigate = useNavigate()
   // null = not yet initialized (waiting for data), will default to first sub
   const [activeSubId, setActiveSubId] = useState<number | null>(null)
   const [initialized, setInitialized] = useState(false)
