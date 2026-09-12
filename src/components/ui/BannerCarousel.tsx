@@ -25,7 +25,7 @@ export default function BannerCarousel({ banners, desktop }: Props) {
           <div
             key={b.id}
             className={`relative min-w-full rounded-card overflow-hidden flex-shrink-0 ${desktop ? 'h-56 lg:h-64' : 'h-40'}`}
-            style={{ background: b.bgColor }}
+            style={{ background: b.bgColor || '#1e293b' }}
           >
             {/* Vivid image */}
             <img
@@ -35,10 +35,14 @@ export default function BannerCarousel({ banners, desktop }: Props) {
               loading="lazy"
               onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
-            {/* Left-to-right color gradient for text readability */}
+            {/* Left-to-right gradient for text readability — brand colour when set, neutral scrim otherwise */}
             <div
               className="absolute inset-0"
-              style={{ background: `linear-gradient(90deg, ${b.bgColor} 8%, ${b.bgColor}E6 42%, ${b.bgColor}00 78%)` }}
+              style={{
+                background: b.bgColor
+                  ? `linear-gradient(90deg, ${b.bgColor} 8%, ${b.bgColor}E6 42%, ${b.bgColor}00 78%)`
+                  : 'linear-gradient(90deg, rgba(0,0,0,0.65) 8%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0) 80%)',
+              }}
             />
             {/* Text */}
             <div className="relative h-full px-6 sm:px-8 lg:px-12 flex flex-col justify-center max-w-[68%] sm:max-w-[60%]">

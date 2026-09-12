@@ -240,16 +240,16 @@ export default function HomePage() {
         {/* ── QuickPrints CTA ── */}
         <div
           onClick={() => navigate('/print')}
-          className="bg-gradient-to-r from-primaryOrange to-orangeDark rounded-2xl p-8 flex items-center justify-between cursor-pointer hover:opacity-95 transition-opacity"
+          className="bg-gradient-to-r from-primaryOrange to-orangeDark rounded-2xl p-6 sm:p-8 flex items-center justify-between gap-4 cursor-pointer hover:opacity-95 transition-opacity"
         >
           <div className="text-white">
-            <p className="font-inter font-black text-3xl">QuickPrints</p>
-            <p className="font-jakarta text-base opacity-80 mt-1">Documents printed & delivered in 25 minutes</p>
+            <p className="font-inter font-black text-2xl sm:text-3xl">QuickPrints</p>
+            <p className="font-jakarta text-sm sm:text-base opacity-80 mt-1">Documents printed & delivered in 25 minutes</p>
             <button className="mt-4 bg-white text-primaryOrange font-inter font-bold text-sm px-6 py-2.5 rounded-btn shadow-cta hover:bg-orangeTint transition-colors">
               Upload & Print
             </button>
           </div>
-          <span className="text-7xl hidden md:block">🖨️</span>
+          <span className="text-6xl lg:text-7xl hidden md:block shrink-0">🖨️</span>
         </div>
 
       </div>

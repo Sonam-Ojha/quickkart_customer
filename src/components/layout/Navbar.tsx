@@ -40,28 +40,30 @@ export default function Navbar() {
 
       {/* ── Main navbar ── */}
       <div className="bg-white border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 h-20 flex items-center gap-6">
+        <div className="px-4 sm:px-6 lg:px-8 py-2.5 lg:py-0 lg:h-20 flex flex-wrap lg:flex-nowrap items-center gap-x-3 gap-y-2.5 lg:gap-6">
 
           {/* Logo */}
-          <Link to="/home" className="shrink-0 leading-none">
-            <span className="font-inter font-black text-3xl tracking-tight">
+          <Link to="/home" className="order-1 shrink-0 leading-none">
+            <span className="font-inter font-black text-2xl sm:text-3xl tracking-tight">
               <span className="text-primaryOrange">Jhat</span>
               <span className="text-deepTeal">pats</span>
             </span>
           </Link>
 
           {/* Separator */}
-          <div className="h-9 w-px bg-border shrink-0 hidden lg:block" />
+          <div className="order-2 h-9 w-px bg-border shrink-0 hidden lg:block" />
 
-          {/* Location */}
+          {/* Location — fills the row-1 gap on mobile, fixed width on desktop */}
           <button
             onClick={() => setLocOpen(true)}
-            className="hidden lg:flex items-center gap-2.5 shrink-0 group min-w-[170px] hover:bg-inputFill rounded-xl px-2 py-1.5 -mx-2 transition-colors"
+            className="order-3 flex flex-1 min-w-0 lg:flex-none lg:min-w-[170px] items-center gap-2 lg:gap-2.5 group hover:bg-inputFill rounded-xl px-2 py-1.5 lg:-mx-2 transition-colors"
           >
-            <div className="w-9 h-9 rounded-btn bg-orangeTint flex items-center justify-center shrink-0">
-              <MapPin size={17} className="text-primaryOrange" />
+            <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-btn bg-orangeTint flex items-center justify-center shrink-0">
+              <MapPin size={16} className="text-primaryOrange lg:hidden" />
+              <MapPin size={17} className="text-primaryOrange hidden lg:block" />
             </div>
-            <div className="text-left">
+            {/* Desktop: two-line "Deliver to" block */}
+            <div className="hidden lg:block text-left">
               <p className="font-jakarta text-xs text-muted leading-none">Deliver to</p>
               <p className="font-inter font-bold text-ink text-sm leading-snug flex items-center gap-1 mt-0.5 max-w-[140px] truncate">
                 {loc.area.split(',')[0]}
@@ -73,13 +75,20 @@ export default function Navbar() {
                 </p>
               )}
             </div>
+            {/* Mobile: single-line area label */}
+            <span className="lg:hidden flex items-center gap-0.5 min-w-0">
+              <span className="font-inter font-bold text-ink text-sm truncate">
+                {loc.area.split(',')[0]}
+              </span>
+              <ChevronDown size={12} className="text-muted shrink-0" />
+            </span>
           </button>
 
           {/* Separator */}
-          <div className="h-9 w-px bg-border shrink-0 hidden lg:block" />
+          <div className="order-4 h-9 w-px bg-border shrink-0 hidden lg:block" />
 
-          {/* Search */}
-          <form onSubmit={handleSearch} className="flex-1">
+          {/* Search — own full-width row on mobile, inline on desktop */}
+          <form onSubmit={handleSearch} className="order-5 w-full lg:w-auto lg:flex-1 min-w-0">
             <div
               className={`flex items-center gap-3 h-11 rounded-card px-4 transition-all duration-150 border-2 ${
                 focused
@@ -95,13 +104,13 @@ export default function Navbar() {
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
                 placeholder='Search "milk", "eggs", "atta", "chips"...'
-                className="flex-1 bg-transparent font-jakarta text-sm text-ink placeholder:text-muted outline-none border-none"
+                className="flex-1 min-w-0 bg-transparent font-jakarta text-sm text-ink placeholder:text-muted outline-none border-none"
               />
               {q && (
                 <button
                   type="button"
                   onClick={() => { setQ(''); inputRef.current?.focus() }}
-                  className="p-0.5 rounded-full hover:bg-border transition-colors"
+                  className="shrink-0 p-0.5 rounded-full hover:bg-border transition-colors"
                 >
                   <X size={14} className="text-muted" />
                 </button>
@@ -110,20 +119,20 @@ export default function Navbar() {
           </form>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="order-4 lg:order-6 flex items-center gap-2.5 sm:gap-3 shrink-0">
 
             {/* Login / Profile */}
             {user ? (
-              <div className="hidden lg:block relative">
+              <div className="relative">
                 <button
                   onClick={() => setProfileOpen(p => !p)}
-                  className="flex items-center gap-2 h-10 px-4 rounded-btn border border-border font-inter font-semibold text-sm text-ink hover:border-primaryOrange transition-all"
+                  className="flex items-center gap-2 h-10 px-2.5 lg:px-4 rounded-btn border border-border font-inter font-semibold text-sm text-ink hover:border-primaryOrange transition-all"
                 >
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primaryOrange to-deepTeal flex items-center justify-center text-white text-xs font-bold">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primaryOrange to-deepTeal flex items-center justify-center text-white text-xs font-bold shrink-0">
                     {user.name?.[0]?.toUpperCase() ?? 'U'}
                   </div>
-                  <span className="max-w-[100px] truncate">{user.name}</span>
-                  <ChevronDown size={12} className="text-muted" />
+                  <span className="hidden lg:block max-w-[100px] truncate">{user.name}</span>
+                  <ChevronDown size={12} className="hidden lg:block text-muted" />
                 </button>
                 {profileOpen && (
                   <div className="absolute right-0 top-12 bg-white rounded-xl border border-border shadow-card w-48 py-1 z-50">
@@ -150,10 +159,10 @@ export default function Navbar() {
             ) : (
               <Link
                 to="/login"
-                className="hidden lg:flex items-center gap-2 h-10 px-5 rounded-btn border border-border font-inter font-semibold text-sm text-textSecondary hover:border-primaryOrange hover:text-primaryOrange transition-all whitespace-nowrap"
+                className="flex items-center gap-2 h-10 px-3 lg:px-5 rounded-btn border border-border font-inter font-semibold text-sm text-textSecondary hover:border-primaryOrange hover:text-primaryOrange transition-all whitespace-nowrap"
               >
-                <User size={16} />
-                Login
+                <User size={16} className="shrink-0" />
+                <span className="hidden sm:inline">Login</span>
               </Link>
             )}
 
@@ -161,7 +170,7 @@ export default function Navbar() {
             <button
               type="button"
               onClick={openCart}
-              className="flex items-center gap-2.5 h-10 px-5 bg-primaryOrange hover:bg-orangeDark text-white rounded-btn font-inter font-bold text-sm shadow-cta transition-colors whitespace-nowrap"
+              className="flex items-center gap-2 sm:gap-2.5 h-10 px-3.5 sm:px-5 bg-primaryOrange hover:bg-orangeDark text-white rounded-btn font-inter font-bold text-sm shadow-cta transition-colors whitespace-nowrap"
             >
               <div className="relative">
                 <ShoppingCart size={18} />

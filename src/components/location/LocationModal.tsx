@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   MapPin, Navigation, Search, X, Clock, ChevronRight,
-  Loader2, AlertCircle, CheckCircle2, Wifi, RotateCcw,
+  Loader2, AlertCircle, CheckCircle2, RotateCcw,
 } from 'lucide-react'
 import { useLocationStore, SavedLocation } from '@/store/locationStore'
-import { useGeoLocation, GPS_ACCURACY_GOOD_M } from '@/hooks/useGeoLocation'
+import { useGeoLocation } from '@/hooks/useGeoLocation'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL as string
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:4000'
 const GKEY     = import.meta.env.VITE_GOOGLE_MAPS_KEY as string
 
 // ── Google Maps / Places loader ───────────────────────────────────────────────
@@ -91,6 +91,47 @@ async function reverseGeocode(lat: number, lng: number): Promise<AddrResult | nu
   } catch { return null }
 }
 
+// True when a reverse-geocode result only resolved to city level (no sector/street).
+function isCityOnly(addr: AddrResult | null): boolean {
+  if (!addr || !addr.area) return true
+  return addr.area === addr.city || !addr.area.includes(',')
+}
+
+// Google reverse geocode — much better sub-locality / sector data for Indian
+// cities. No-ops gracefully (returns null) when VITE_GOOGLE_MAPS_KEY is absent.
+async function googleReverseGeocode(lat: number, lng: number): Promise<AddrResult | null> {
+  try {
+    await ensureMaps()
+  } catch { return null }
+  const g = (window as any).google
+  if (!g?.maps?.Geocoder) return null
+  return new Promise((resolve) => {
+    new g.maps.Geocoder().geocode(
+      { location: { lat, lng } },
+      (results: any[] | null, status: string) => {
+        if (status !== 'OK' || !results?.length) return resolve(null)
+        const best = results.find((r) => !r.types?.includes('plus_code')) || results[0]
+        const get = (type: string): string =>
+          best.address_components?.find((c: any) => c.types.includes(type))?.long_name || ''
+        const micro = get('sublocality_level_2') || get('sublocality_level_1') ||
+                      get('sublocality') || get('neighborhood')
+        const route = get('route')
+        const city  = get('locality') || get('administrative_area_level_2') ||
+                      get('administrative_area_level_3')
+        resolve({
+          locality:         micro || route || city || 'Current Location',
+          area:             [route, micro, city].filter(Boolean).join(', ') || best.formatted_address || '',
+          city,
+          state:            get('administrative_area_level_1'),
+          postalCode:       get('postal_code'),
+          country:          get('country'),
+          formattedAddress: best.formatted_address || '',
+        })
+      },
+    )
+  })
+}
+
 function toSavedLocation(
   addr: AddrResult | null,
   lat: number, lng: number,
@@ -99,7 +140,11 @@ function toSavedLocation(
   source: SavedLocation['source'] = 'gps',
 ): SavedLocation {
   if (!addr) {
-    return { label: fallbackLabel || 'My Location', area: fallbackLabel ? '' : '', pincode: '', lat, lng, accuracy, source }
+    return {
+      label: fallbackLabel || 'My Location',
+      area:  fallbackLabel ? '' : `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+      pincode: '', lat, lng, accuracy, source,
+    }
   }
   return {
     label:           addr.locality || addr.city || fallbackLabel || 'My Location',
@@ -147,10 +192,16 @@ export default function LocationModal({ open, onClose }: Props) {
     const { coords } = gpsStatus
     setPendingLoading(true)
     setPending({ label: 'Detecting…', area: '', pincode: '', lat: coords.lat, lng: coords.lng, accuracy: coords.accuracy, source: 'gps' })
-    reverseGeocode(coords.lat, coords.lng).then((addr) => {
-      setPending(toSavedLocation(addr, coords.lat, coords.lng, coords.accuracy))
-      setPendingLoading(false)
-    })
+    reverseGeocode(coords.lat, coords.lng)
+      .then(async (addr) => {
+        // Backend (OSM) only gave a city — try Google for sector/street detail.
+        if (isCityOnly(addr)) return (await googleReverseGeocode(coords.lat, coords.lng)) || addr
+        return addr
+      })
+      .then((addr) => {
+        setPending(toSavedLocation(addr, coords.lat, coords.lng, coords.accuracy))
+        setPendingLoading(false)
+      })
   }, [gpsStatus])
 
   // Debounced search: Google Places first, fallback to backend Nominatim
@@ -271,7 +322,7 @@ export default function LocationModal({ open, onClose }: Props) {
                   {gpsStatus.kind === 'improving' && (
                     <>
                       <p className="font-inter font-semibold text-ink text-sm">Getting precise location…</p>
-                      <p className="font-jakarta text-xs text-muted">Accuracy: ~{gpsStatus.accuracy}m — improving…</p>
+                      <p className="font-jakarta text-xs text-muted">Please wait…</p>
                     </>
                   )}
                   {pending && gpsStatus.kind !== 'requesting' && gpsStatus.kind !== 'improving' && (
@@ -282,20 +333,11 @@ export default function LocationModal({ open, onClose }: Props) {
                       {!pendingLoading && pending.area && (
                         <p className="font-jakarta text-xs text-muted mt-0.5 line-clamp-2">{pending.area}</p>
                       )}
-                      {!pendingLoading && (
+                      {!pendingLoading && pending.pincode && (
                         <div className="flex gap-2 mt-1 flex-wrap">
-                          {pending.pincode && (
-                            <span className="text-xs font-jakarta text-muted bg-white px-1.5 py-0.5 rounded">
-                              PIN {pending.pincode}
-                            </span>
-                          )}
-                          {pending.accuracy !== undefined && (
-                            <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-jakarta ${
-                              pending.accuracy <= GPS_ACCURACY_GOOD_M ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                            }`}>
-                              <Wifi size={9} />~{pending.accuracy}m
-                            </span>
-                          )}
+                          <span className="text-xs font-jakarta text-muted bg-white px-1.5 py-0.5 rounded">
+                            PIN {pending.pincode}
+                          </span>
                         </div>
                       )}
                     </>
