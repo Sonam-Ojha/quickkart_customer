@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'https://api.jhatpats.com/api/app',
+  baseURL: `${import.meta.env.VITE_API_BASE_URL ?? 'https://api.jhatpats.com'}/api/app`,
   headers: { 'Content-Type': 'application/json' },
 })
 

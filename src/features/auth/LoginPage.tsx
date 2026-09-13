@@ -22,12 +22,14 @@ export default function LoginPage() {
   const [otpStep, setOtpStep]       = useState<'input' | 'verify'>('input')
   const [otpDigits, setOtpDigits]   = useState('')
   const [otpSending, setOtpSending] = useState(false)
+  const [devOtp, setDevOtp]         = useState<string | null>(null)
 
   const handleSendOtp = async () => {
     if (!otpContact.trim()) return
-    setOtpSending(true); setError('')
+    setOtpSending(true); setError(''); setDevOtp(null)
     try {
-      await api.post('/otp/send', { mobile: otpContact })
+      const { data } = await api.post('/otp/send', { mobile: otpContact })
+      if (data.devOtp) setDevOtp(data.devOtp)
       setOtpStep('verify')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to send OTP')
@@ -173,8 +175,17 @@ export default function LoginPage() {
                 <>
                   <p className="text-sm text-textSecondary font-jakarta">
                     OTP sent to <b>{otpContact}</b>{' '}
-                    <button onClick={() => setOtpStep('input')} className="text-primaryOrange hover:underline">Change</button>
+                    <button onClick={() => { setOtpStep('input'); setDevOtp(null) }} className="text-primaryOrange hover:underline">Change</button>
                   </p>
+                  {devOtp && (
+                    <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <span className="text-xl">🔑</span>
+                      <div>
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Demo OTP (SMS nahi gaya)</p>
+                        <p className="font-inter font-black text-2xl tracking-widest text-amber-800">{devOtp}</p>
+                      </div>
+                    </div>
+                  )}
                   <input type="text" inputMode="numeric" maxLength={6}
                     placeholder="Enter 6-digit OTP"
                     value={otpDigits} onChange={e => setOtpDigits(e.target.value.replace(/\D/g,'').slice(0,6))}

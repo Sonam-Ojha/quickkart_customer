@@ -47,6 +47,7 @@ export default function CartDrawer() {
   const [otp, setOtp]                   = useState(['', '', '', '', '', ''])
   const [otpSending, setOtpSending]     = useState(false)
   const [otpError, setOtpError]         = useState('')
+  const [devOtp, setDevOtp]             = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [placing, setPlacing]           = useState(false)
   const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -202,9 +203,10 @@ export default function CartDrawer() {
 
   const handleContinue = async () => {
     if (phone.length !== 10) return
-    setOtpSending(true); setOtpError('')
+    setOtpSending(true); setOtpError(''); setDevOtp(null)
     try {
-      await api.post('/otp/send', { mobile: phone })
+      const { data } = await api.post('/otp/send', { mobile: phone })
+      if (data.devOtp) setDevOtp(data.devOtp)
       setOtp(['', '', '', '', '', ''])
       setStep('otp')
     } catch (e: any) {
@@ -551,6 +553,15 @@ export default function CartDrawer() {
               ) : (
                 /* OTP boxes */
                 <>
+                  {devOtp && (
+                    <div className="mt-5 flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <span className="text-2xl">🔑</span>
+                      <div>
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Demo OTP</p>
+                        <p className="font-inter font-black text-2xl tracking-widest text-amber-800">{devOtp}</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="mt-8 flex justify-between gap-2">
                     {otp.map((d, i) => (
                       <input
@@ -608,8 +619,8 @@ export default function CartDrawer() {
             <div className="border-t border-border px-10 py-4 text-center">
               <p className="font-jakarta text-13 text-muted">
                 By continuing, you agree to our{' '}
-                <span className="text-textSecondary underline">Terms of service</span> &{' '}
-                <span className="text-textSecondary underline">Privacy policy</span>
+                <a href="/info/terms-of-service" target="_blank" className="text-textSecondary underline hover:text-primary">Terms of service</a> &{' '}
+                <a href="/info/privacy-policy" target="_blank" className="text-textSecondary underline hover:text-primary">Privacy policy</a>
               </p>
             </div>
           </div>

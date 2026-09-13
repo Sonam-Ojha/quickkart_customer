@@ -13,6 +13,8 @@ interface AuthUser {
 interface AuthState {
   user: AuthUser | null
   token: string | null
+  _hasHydrated: boolean
+  setHasHydrated: (v: boolean) => void
   setAuth: (user: AuthUser, token: string) => void
   logout: () => void
   isAuthenticated: () => boolean
@@ -23,6 +25,9 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       token: null,
+      _hasHydrated: false,
+
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
 
       setAuth: (user, token) => {
         localStorage.setItem('qk_token', token)
@@ -36,6 +41,11 @@ export const useAuthStore = create<AuthState>()(
 
       isAuthenticated: () => !!get().token,
     }),
-    { name: 'qk-customer-auth' },
+    {
+      name: 'qk-customer-auth',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
+    },
   ),
 )

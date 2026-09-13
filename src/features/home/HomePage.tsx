@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BannerCarousel from '@/components/ui/BannerCarousel'
 import ProductCard from '@/components/ui/ProductCard'
@@ -7,6 +8,44 @@ import { useCategories, useCategoryDetail } from '@/hooks/useCategories'
 import { useBanners } from '@/hooks/useBanners'
 import { useProducts } from '@/hooks/useProducts'
 import type { Category } from '@/hooks/useCategories'
+import api from '@/lib/api'
+
+interface ServiceStatus { isOpen: boolean; message?: string; reopensAt?: string; nextShiftName?: string }
+
+function useServiceStatus() {
+  const [status, setStatus] = useState<ServiceStatus | null>(null)
+  useEffect(() => {
+    api.get<ServiceStatus>('/api/app/service-status')
+      .then(r => setStatus(r.data))
+      .catch(() => setStatus({ isOpen: true }))
+  }, [])
+  return status
+}
+
+function ClosedScreen({ message, reopensAt, nextShiftName }: { message?: string; reopensAt?: string; nextShiftName?: string }) {
+  return (
+    <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 text-center">
+      <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-orange-50">
+        <span className="text-5xl">🕐</span>
+      </div>
+      <h1 className="font-inter font-black text-2xl text-gray-900 mb-2">We're closed right now</h1>
+      <p className="font-jakarta text-gray-500 text-base max-w-sm leading-relaxed mb-6">
+        {message || "We're not accepting orders at the moment. Please check back soon!"}
+      </p>
+      {reopensAt && (
+        <div className="inline-flex items-center gap-2 rounded-2xl bg-orange-50 border border-orange-100 px-5 py-3">
+          <span className="text-xl">⏰</span>
+          <div className="text-left">
+            <p className="font-inter text-xs font-semibold text-orange-400 uppercase tracking-wide">
+              {nextShiftName ? `${nextShiftName} shift opens at` : 'Opens at'}
+            </p>
+            <p className="font-inter font-bold text-orange-600 text-lg leading-tight">{reopensAt}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const BG_THEME: Record<string, Pick<PromoTileData, 'gradient' | 'ring' | 'accent'>> = {
   'orange-tint':  { gradient: 'from-orange-50 to-amber-50',   ring: 'ring-orange-100',  accent: 'text-orange-600'  },
@@ -129,6 +168,7 @@ function MainCategoryGrid({ categories, loading }: { categories: Category[]; loa
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const navigate = useNavigate()
+  const serviceStatus = useServiceStatus()
 
   const { data: heroBanners = [], isLoading: bannersLoading } = useBanners('hero')
   const { data: promoRaw   = [], isLoading: promosLoading  } = useBanners('promo')
@@ -154,6 +194,18 @@ export default function HomePage() {
   // Only root (main) categories for per-category rows — capped so total homepage
   // sections (Deal of the Day + category rows + Best Sellers) come to 7
   const mainCategories = categories.filter(c => !c.parentId).slice(0, 5)
+
+  if (serviceStatus && !serviceStatus.isOpen) {
+    return (
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-20 2xl:px-28 py-6">
+        <ClosedScreen
+          message={serviceStatus.message}
+          reopensAt={serviceStatus.reopensAt}
+          nextShiftName={serviceStatus.nextShiftName}
+        />
+      </div>
+    )
+  }
 
   return (
     <div>
