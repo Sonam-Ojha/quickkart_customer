@@ -143,7 +143,14 @@ export default function ProductDetailPage() {
           )}
 
           {/* Add to Cart */}
-          {qty === 0 ? (
+          {product.inStock === false ? (
+            <div className="w-full sm:w-64">
+              <div className="h-12 bg-slate-100 border border-slate-200 text-slate-400 rounded-btn font-inter font-bold text-base flex items-center justify-center cursor-not-allowed">
+                Out of Stock
+              </div>
+              <p className="text-xs text-muted text-center mt-2">Currently unavailable at your location</p>
+            </div>
+          ) : qty === 0 ? (
             <button
               onClick={() => add(product)}
               className="w-full sm:w-64 h-12 bg-primaryOrange hover:bg-orangeDark text-white rounded-btn shadow-cta font-inter font-bold text-base flex items-center justify-center gap-2 transition-colors"

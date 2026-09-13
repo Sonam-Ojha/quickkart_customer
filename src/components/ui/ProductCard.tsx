@@ -37,17 +37,21 @@ export default function ProductCard({ product }: Props) {
           src={product.img}
           alt={product.name}
           category={product.category}
-          className="w-full h-full"
+          className={`w-full h-full ${product.inStock === false ? 'opacity-50' : ''}`}
           imgClassName="object-contain p-5 pb-0"
           emojiSize="text-5xl"
           onClick={() => navigate(`/product/${product.id}`)}
         />
-        {product.badge && (
+        {product.inStock === false ? (
+          <span className="absolute top-2 left-2 text-2xs font-inter font-bold px-2 py-0.5 rounded-full bg-slate-600 text-white">
+            OUT OF STOCK
+          </span>
+        ) : product.badge ? (
           <span className={`absolute top-2 left-2 text-2xs font-inter font-bold px-2 py-0.5 rounded-full ${badgeConfig[product.badge].bg}`}>
             {badgeConfig[product.badge].label}
           </span>
-        )}
-        {disc > 0 && (
+        ) : null}
+        {product.inStock !== false && disc > 0 && (
           <span className="absolute top-2 right-2 bg-success text-white text-2xs font-inter font-bold px-2 py-0.5 rounded-full">
             {disc}% off
           </span>
@@ -77,7 +81,14 @@ export default function ProductCard({ product }: Props) {
             )}
           </div>
 
-          {qty === 0 ? (
+          {product.inStock === false ? (
+            <button
+              disabled
+              className="h-9 px-3 bg-slate-100 border border-slate-200 text-slate-400 rounded-btn font-inter font-bold text-xs uppercase tracking-wide cursor-not-allowed shrink-0"
+            >
+              Notify
+            </button>
+          ) : qty === 0 ? (
             <button
               onClick={() => add(product)}
               className="h-9 px-4 bg-cardSurface border border-primaryOrange text-primaryOrange hover:bg-orangeTint rounded-btn font-inter font-bold text-xs uppercase tracking-wide transition-colors shrink-0"
