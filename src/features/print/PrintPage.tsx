@@ -1,12 +1,21 @@
-import { useState } from 'react'
-import { Upload, Clock, Shield, Zap, X, Plus, Minus, CheckCircle, ChevronRight, FileText, Loader2 } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Upload, Clock, Shield, Zap, X, Plus, Minus, CheckCircle, ChevronRight, FileText, Loader2, AlertCircle } from 'lucide-react'
 import { useFaqs } from '@/hooks/useFaqs'
+import api from '@/lib/api'
 
 type PrintColor = 'bw' | 'color'
 type PaperSize  = 'A4' | 'A3' | 'Letter'
 type Sides      = 'single' | 'double'
 
-interface UploadedFile { name: string; size: string; pages: number }
+interface UploadedFile {
+  name: string
+  size: string
+  pages: number
+  url: string | null
+  key: string | null
+  uploading: boolean
+  error: string | null
+}
 
 const BW_RATE = 3, COLOR_RATE = 10, DELIVERY = 25
 
@@ -18,24 +27,100 @@ export default function PrintPage() {
   const [copies,   setCopies]   = useState(1)
   const [openFaq,  setOpenFaq]  = useState<number | null>(null)
   const [success,  setSuccess]  = useState(false)
+  const [placing,  setPlacing]  = useState(false)
+  const [placeErr, setPlaceErr] = useState<string | null>(null)
+  const [orderId,  setOrderId]  = useState<number | null>(null)
 
-  // Dynamic FAQs from backend (admin panel manages these)
   const { data: faqs = [], isLoading: faqsLoading } = useFaqs('print')
 
-  const totalPages  = files.reduce((a, f) => a + f.pages, 0)
-  const rate        = color === 'bw' ? BW_RATE : COLOR_RATE
-  const sidesMul    = sides === 'double' ? 0.6 : 1
-  const printCost   = Math.ceil(totalPages * rate * sidesMul * copies)
-  const grandTotal  = files.length > 0 ? printCost + DELIVERY : 0
+  const totalPages = files.reduce((a, f) => a + f.pages, 0)
+  const rate       = color === 'bw' ? BW_RATE : COLOR_RATE
+  const sidesMul   = sides === 'double' ? 0.6 : 1
+  const printCost  = Math.ceil(totalPages * rate * sidesMul * copies)
+  const grandTotal = files.length > 0 ? printCost + DELIVERY : 0
 
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const allUploaded = files.length > 0 && files.every(f => f.url && !f.uploading)
+  const anyUploading = files.some(f => f.uploading)
+
+  const uploadFile = async (rawFile: File, index: number) => {
+    const form = new FormData()
+    form.append('file', rawFile)
+    try {
+      const { data } = await api.post<{ url: string; key: string; name: string }>(
+        '/print/upload',
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
+      setFiles(prev => prev.map((f, i) =>
+        i === index ? { ...f, url: data.url, key: data.key, uploading: false, error: null } : f
+      ))
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Upload failed'
+      setFiles(prev => prev.map((f, i) =>
+        i === index ? { ...f, uploading: false, error: msg } : f
+      ))
+    }
+  }
+
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? [])
-    const mapped = picked.map((f) => ({
+    if (!picked.length) return
+    e.target.value = ''
+
+    const newEntries: UploadedFile[] = picked.map(f => ({
       name: f.name,
       size: f.size < 1024 * 1024 ? `${(f.size / 1024).toFixed(0)} KB` : `${(f.size / 1024 / 1024).toFixed(1)} MB`,
       pages: 1,
+      url: null,
+      key: null,
+      uploading: true,
+      error: null,
     }))
-    setFiles((p) => [...p, ...mapped].slice(0, 20))
+
+    setFiles(prev => {
+      const merged = [...prev, ...newEntries].slice(0, 20)
+      const startIdx = prev.length
+      // Upload each new file
+      picked.forEach((rawFile, i) => {
+        if (startIdx + i < 20) uploadFile(rawFile, startIdx + i)
+      })
+      return merged
+    })
+  }
+
+  const removeFile = (idx: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const updatePages = (idx: number, delta: number) => {
+    setFiles(prev => prev.map((f, i) =>
+      i === idx ? { ...f, pages: Math.max(1, f.pages + delta) } : f
+    ))
+  }
+
+  const handlePlaceOrder = async () => {
+    if (!allUploaded) return
+    setPlacing(true)
+    setPlaceErr(null)
+    try {
+      const filePayload = files.map(f => ({ name: f.name, url: f.url!, key: f.key!, pages: f.pages }))
+      const { data } = await api.post<{ id: number }>('/print/orders', {
+        files:      filePayload,
+        color,
+        paper,
+        sides,
+        copies,
+        totalPages,
+        printCost,
+        grandTotal,
+      })
+      setOrderId(data.id)
+      setSuccess(true)
+    } catch (err: any) {
+      setPlaceErr(err?.response?.data?.message ?? 'Order failed. Please try again.')
+    } finally {
+      setPlacing(false)
+    }
   }
 
   if (success) {
@@ -46,6 +131,7 @@ export default function PrintPage() {
             <CheckCircle size={44} className="text-success" />
           </div>
           <h2 className="font-inter font-bold text-ink text-2xl mb-2">Print Order Placed!</h2>
+          {orderId && <p className="font-jakarta text-xs text-textSecondary mb-1">Order #{orderId}</p>}
           <p className="font-jakarta text-textSecondary mb-5">
             Delivery in <span className="text-primaryOrange font-semibold">25 minutes</span>
           </p>
@@ -54,7 +140,7 @@ export default function PrintPage() {
             <p className="font-inter font-extrabold text-3xl text-ink mt-1">₹{grandTotal}</p>
           </div>
           <button
-            onClick={() => { setFiles([]); setSuccess(false); setCopies(1) }}
+            onClick={() => { setFiles([]); setSuccess(false); setCopies(1); setOrderId(null) }}
             className="w-full h-12 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold hover:bg-orangeDark transition-colors"
           >
             Print More Documents
@@ -119,22 +205,47 @@ export default function PrintPage() {
             {files.length > 0 && (
               <div className="bg-cardSurface rounded-2xl border border-border overflow-hidden">
                 <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-                  <h3 className="font-inter font-bold text-ink text-sm">Uploaded Files ({files.length})</h3>
+                  <h3 className="font-inter font-bold text-ink text-sm">Files ({files.length})</h3>
                   <label className="text-primaryOrange text-xs font-inter font-semibold cursor-pointer flex items-center gap-1 hover:underline">
                     <Plus size={13} /> Add more
                     <input type="file" className="hidden" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={handleFiles} />
                   </label>
                 </div>
                 {files.map((f, i) => (
-                  <div key={i} className={`flex items-center gap-4 px-5 py-3 ${i < files.length - 1 ? 'border-b border-border' : ''}`}>
-                    <FileText size={20} className="text-primaryOrange shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-jakarta text-sm text-ink truncate">{f.name}</p>
-                      <p className="font-jakarta text-xs text-muted">{f.size}</p>
+                  <div key={i} className={`px-5 py-3 ${i < files.length - 1 ? 'border-b border-border' : ''}`}>
+                    <div className="flex items-center gap-4">
+                      <FileText size={20} className="text-primaryOrange shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-jakarta text-sm text-ink truncate">{f.name}</p>
+                        <p className="font-jakarta text-xs text-muted">{f.size}</p>
+                      </div>
+                      {f.uploading ? (
+                        <Loader2 size={16} className="animate-spin text-primaryOrange shrink-0" />
+                      ) : f.error ? (
+                        <AlertCircle size={16} className="text-error shrink-0" title={f.error} />
+                      ) : (
+                        <CheckCircle size={16} className="text-success shrink-0" />
+                      )}
+                      <button onClick={() => removeFile(i)}>
+                        <X size={16} className="text-muted hover:text-error transition-colors" />
+                      </button>
                     </div>
-                    <button onClick={() => setFiles((p) => p.filter((_, idx) => idx !== i))}>
-                      <X size={16} className="text-muted hover:text-error transition-colors" />
-                    </button>
+                    {/* Pages control per file */}
+                    {!f.uploading && !f.error && (
+                      <div className="flex items-center gap-2 mt-2 pl-9">
+                        <span className="font-jakarta text-xs text-textSecondary">Pages:</span>
+                        <button onClick={() => updatePages(i, -1)} className="w-6 h-6 rounded-full bg-inputFill flex items-center justify-center">
+                          <Minus size={11} className="text-ink" />
+                        </button>
+                        <span className="font-inter font-bold text-sm text-ink w-4 text-center">{f.pages}</span>
+                        <button onClick={() => updatePages(i, 1)} className="w-6 h-6 rounded-full bg-primaryOrange flex items-center justify-center">
+                          <Plus size={11} className="text-white" />
+                        </button>
+                      </div>
+                    )}
+                    {f.error && (
+                      <p className="pl-9 mt-1 text-xs text-error">{f.error}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -232,10 +343,9 @@ export default function PrintPage() {
               ))}
             </div>
 
-            {/* FAQs — dynamic from admin panel */}
+            {/* FAQs */}
             <section>
               <h2 className="font-inter font-bold text-ink text-xl mb-4">Frequently Asked Questions</h2>
-
               {faqsLoading ? (
                 <div className="flex items-center gap-2 text-muted py-6">
                   <Loader2 size={16} className="animate-spin" />
@@ -308,13 +418,26 @@ export default function PrintPage() {
                 <span className="font-inter font-bold text-ink">Total</span>
                 <span className="font-inter font-bold text-ink text-lg">₹{grandTotal}</span>
               </div>
-              <div className="px-5 pb-5">
+              <div className="px-5 pb-5 space-y-2">
+                {placeErr && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600">
+                    <AlertCircle size={13} className="shrink-0" />{placeErr}
+                  </div>
+                )}
                 <button
-                  onClick={() => files.length > 0 && setSuccess(true)}
-                  disabled={files.length === 0}
-                  className="w-full h-12 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold hover:bg-orangeDark transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                  onClick={handlePlaceOrder}
+                  disabled={!allUploaded || placing}
+                  className="w-full h-12 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold hover:bg-orangeDark transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
                 >
-                  {files.length === 0 ? 'Upload files to continue' : `Order Printout · ₹${grandTotal}`}
+                  {placing ? (
+                    <><Loader2 size={16} className="animate-spin" /> Placing order...</>
+                  ) : anyUploading ? (
+                    <><Loader2 size={16} className="animate-spin" /> Uploading files...</>
+                  ) : files.length === 0 ? (
+                    'Upload files to continue'
+                  ) : (
+                    `Order Printout · ₹${grandTotal}`
+                  )}
                 </button>
               </div>
             </div>
