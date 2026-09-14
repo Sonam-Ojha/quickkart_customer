@@ -1,33 +1,13 @@
-import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import api from '@/lib/api'
-
-interface Section { heading: string; body: string }
-interface PageData { title: string; subtitle: string; sections: Section[] }
+import { infoPages } from '@/data/infoPages'
 
 export default function InfoPage() {
-  const { slug }   = useParams<{ slug: string }>()
-  const navigate   = useNavigate()
-  const [page, setPage]       = useState<PageData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(false)
+  const { slug }  = useParams<{ slug: string }>()
+  const navigate  = useNavigate()
+  const page      = slug ? infoPages[slug] : null
 
-  useEffect(() => {
-    if (!slug) return
-    setLoading(true)
-    setError(false)
-    api.get<PageData>(`/api/app/pages/${slug}`)
-      .then(r => setPage(r.data))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false))
-  }, [slug])
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>
-  }
-
-  if (error || !page) {
+  if (!page) {
     return (
       <div className="max-w-screen-2xl mx-auto px-8 xl:px-20 2xl:px-28 py-24 text-center">
         <p className="text-6xl mb-6">🔍</p>
@@ -50,9 +30,12 @@ export default function InfoPage() {
           >
             <ArrowLeft size={15} /> Back
           </button>
-          <div>
-            <h1 className="font-inter font-black text-3xl text-gray-900 leading-tight">{page.title}</h1>
-            {page.subtitle && <p className="font-jakarta text-gray-500 mt-1">{page.subtitle}</p>}
+          <div className="flex items-center gap-3">
+            <span className="text-4xl">{page.emoji}</span>
+            <div>
+              <h1 className="font-inter font-black text-3xl text-gray-900 leading-tight">{page.title}</h1>
+              {page.subtitle && <p className="font-jakarta text-gray-500 mt-1">{page.subtitle}</p>}
+            </div>
           </div>
         </div>
       </div>
