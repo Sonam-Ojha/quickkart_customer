@@ -159,13 +159,27 @@ function toSavedLocation(
   }
 }
 
+// ── Manual address geocode via Nominatim ──────────────────────────────────────
+async function geocodeManual(area: string, city: string, pincode: string): Promise<{ lat: number; lng: number } | null> {
+  const q = [area, city, pincode, 'India'].filter(Boolean).join(', ')
+  try {
+    const res = await fetch(`${API_BASE}/api/app/location/search?q=${encodeURIComponent(q)}`, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return null
+    const data = await res.json()
+    const first = data.results?.[0]
+    return first?.lat && first?.lng ? { lat: first.lat, lng: first.lng } : null
+  } catch { return null }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
+type Tab = 'auto' | 'manual'
 interface Props { open: boolean; onClose: () => void }
 
 export default function LocationModal({ open, onClose }: Props) {
   const { current, recents, setLocation } = useLocationStore()
   const { status: gpsStatus, request: requestGps, reset: resetGps } = useGeoLocation()
 
+  const [tab,          setTab]         = useState<Tab>('auto')
   const [query,        setQuery]       = useState('')
   const [predictions,  setPredictions] = useState<Prediction[]>([])
   const [searching,    setSearching]   = useState(false)
@@ -173,18 +187,47 @@ export default function LocationModal({ open, onClose }: Props) {
   const [pending,      setPending]     = useState<SavedLocation | null>(null)
   const [pendingLoading, setPendingLoading] = useState(false)
 
+  // Manual entry fields
+  const [manualArea,    setManualArea]    = useState('')
+  const [manualCity,    setManualCity]    = useState('')
+  const [manualPincode, setManualPincode] = useState('')
+  const [manualSaving,  setManualSaving]  = useState(false)
+  const [manualError,   setManualError]   = useState('')
+
   const inputRef = useRef<HTMLInputElement>(null)
   const debRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Reset on open
   useEffect(() => {
     if (open) {
+      setTab('auto')
       setQuery(''); setPredictions([]); setPending(null); setPendingLoading(false)
+      setManualArea(''); setManualCity(''); setManualPincode(''); setManualError('')
       resetGps()
       ensureMaps().catch(() => {})
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [open, resetGps])
+
+  const handleManualSave = async () => {
+    if (!manualArea.trim() || !manualCity.trim() || !manualPincode.trim()) {
+      setManualError('Area, city and pincode are required')
+      return
+    }
+    setManualSaving(true); setManualError('')
+    const coords = await geocodeManual(manualArea, manualCity, manualPincode)
+    const loc: SavedLocation = {
+      label:   manualArea.split(',')[0].trim() || manualCity,
+      area:    `${manualArea}, ${manualCity}`,
+      pincode: manualPincode,
+      city:    manualCity,
+      ...(coords ?? {}),
+      source:  'manual' as any,
+    }
+    setLocation({ ...loc, capturedAt: Date.now() })
+    setManualSaving(false)
+    onClose()
+  }
 
   // GPS success → reverse geocode → show confirmation card
   useEffect(() => {
@@ -300,10 +343,80 @@ export default function LocationModal({ open, onClose }: Props) {
           </button>
         </div>
 
+        {/* ── Tabs ── */}
+        <div className="flex border-b border-border shrink-0">
+          {(['auto', 'manual'] as Tab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-2.5 text-xs font-inter font-semibold transition-colors ${tab === t ? 'text-primaryOrange border-b-2 border-primaryOrange' : 'text-muted hover:text-ink'}`}
+            >
+              {t === 'auto' ? '📍 GPS / Search' : '✏️ Type Address'}
+            </button>
+          ))}
+        </div>
+
         <div className="p-4 space-y-3 overflow-y-auto flex-1">
 
+          {/* ── Manual entry tab ── */}
+          {tab === 'manual' && (
+            <div className="space-y-3">
+              <p className="font-jakarta text-xs text-muted">Enter your area and we'll show relevant stores</p>
+              {manualError && (
+                <div className="flex items-center gap-2 p-2.5 bg-red-50 border border-red-100 rounded-lg text-xs text-red-600">
+                  <AlertCircle size={13} className="shrink-0" />{manualError}
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-inter font-semibold text-muted block mb-1">Area / Locality *</label>
+                <input
+                  value={manualArea}
+                  onChange={e => setManualArea(e.target.value)}
+                  placeholder="e.g. Sector 10, Rohini"
+                  className="w-full h-10 bg-inputFill border border-border rounded-btn px-3 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-inter font-semibold text-muted block mb-1">City *</label>
+                  <input
+                    value={manualCity}
+                    onChange={e => setManualCity(e.target.value)}
+                    placeholder="e.g. Delhi"
+                    className="w-full h-10 bg-inputFill border border-border rounded-btn px-3 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-inter font-semibold text-muted block mb-1">Pincode *</label>
+                  <input
+                    value={manualPincode}
+                    onChange={e => setManualPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="e.g. 110085"
+                    inputMode="numeric"
+                    maxLength={6}
+                    className="w-full h-10 bg-inputFill border border-border rounded-btn px-3 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleManualSave}
+                disabled={manualSaving || !manualArea.trim() || !manualCity.trim() || !manualPincode.trim()}
+                className="w-full h-11 bg-primaryOrange hover:bg-orange-600 text-white rounded-btn font-inter font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {manualSaving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                Set this location
+              </button>
+              <p className="text-center font-jakarta text-xs text-muted">
+                Or switch to{' '}
+                <button onClick={() => setTab('auto')} className="text-primaryOrange hover:underline font-semibold">GPS / Search</button>
+                {' '}for precise map tracking
+              </p>
+            </div>
+          )}
+
+          {/* ── Auto tab content ── */}
           {/* ── Confirmation card (GPS or search result) ── */}
-          {showConfirmCard && (
+          {tab === 'auto' && showConfirmCard && (
             <div className="rounded-xl border-2 border-primaryOrange/30 bg-orangeTint overflow-hidden">
               <div className="px-4 py-3 flex items-start gap-3">
                 <div className="w-9 h-9 bg-primaryOrange rounded-xl flex items-center justify-center shrink-0 mt-0.5">
@@ -369,7 +482,7 @@ export default function LocationModal({ open, onClose }: Props) {
           )}
 
           {/* ── GPS button ── */}
-          {!showConfirmCard && (
+          {tab === 'auto' && !showConfirmCard && (
             <button
               onClick={requestGps}
               className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-primaryOrange/20 bg-orangeTint hover:bg-orange-100 transition-colors group"
@@ -386,7 +499,7 @@ export default function LocationModal({ open, onClose }: Props) {
           )}
 
           {/* GPS error */}
-          {gpsStatus.kind === 'error' && (
+          {tab === 'auto' && gpsStatus.kind === 'error' && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
               <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -399,7 +512,7 @@ export default function LocationModal({ open, onClose }: Props) {
           )}
 
           {/* ── Search box ── */}
-          <div className="relative">
+          {tab === 'auto' && <div className="relative">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
             <input
               ref={inputRef}
@@ -416,10 +529,10 @@ export default function LocationModal({ open, onClose }: Props) {
                   </button>
                 )
             }
-          </div>
+          </div>}
 
           {/* Search predictions */}
-          {predictions.length > 0 && (
+          {tab === 'auto' && predictions.length > 0 && (
             <div className="space-y-0.5">
               <p className="font-inter font-semibold text-xs text-muted px-1 pb-1">SUGGESTIONS</p>
               {predictions.map((pred) => (
@@ -439,16 +552,21 @@ export default function LocationModal({ open, onClose }: Props) {
           )}
 
           {/* No results */}
-          {query.trim().length >= 3 && !searching && predictions.length === 0 && (
+          {tab === 'auto' && query.trim().length >= 3 && !searching && predictions.length === 0 && (
             <div className="py-6 text-center">
               <MapPin size={28} className="text-border mx-auto mb-2" />
               <p className="font-jakarta text-sm text-muted">No results for "{query}"</p>
-              <p className="font-jakarta text-xs text-muted/70 mt-1">Try a different area, city, or pincode</p>
+              <p className="font-jakarta text-xs text-muted/70 mt-1">
+                Try a different area, or{' '}
+                <button onClick={() => setTab('manual')} className="text-primaryOrange hover:underline font-semibold">
+                  type address manually
+                </button>
+              </p>
             </div>
           )}
 
           {/* Recents */}
-          {query.trim().length === 0 && recents.length > 0 && !showConfirmCard && (
+          {tab === 'auto' && query.trim().length === 0 && recents.length > 0 && !showConfirmCard && (
             <div className="space-y-0.5">
               <p className="font-inter font-semibold text-xs text-muted px-1 pb-1">RECENT</p>
               {recents.map((loc, i) => (
