@@ -7,7 +7,8 @@ import { useAuthStore } from '@/store/authStore'
 interface Profile {
   id: string
   name: string
-  phone: string
+  phone: string   // normalized from mobile by backend
+  mobile: string  // raw field
   email: string | null
   wallet_balance: number
 }
@@ -78,7 +79,7 @@ export default function ProfilePage() {
           {initial}
         </div>
         <h1 className="font-inter font-bold text-ink text-2xl">{profile?.name}</h1>
-        <p className="font-jakarta text-sm text-muted mt-1">+91 {profile?.phone}</p>
+        <p className="font-jakarta text-sm text-muted mt-1">+91 {profile?.phone || profile?.mobile || '—'}</p>
         {profile?.wallet_balance != null && profile.wallet_balance > 0 && (
           <span className="mt-2 px-3 py-1 bg-green-50 border border-green-100 text-green-700 rounded-full font-inter font-semibold text-sm">
             Wallet: ₹{profile.wallet_balance}
@@ -135,7 +136,7 @@ export default function ProfilePage() {
               <Phone size={12} /> Mobile Number
             </label>
             <p className="font-jakarta text-ink text-sm py-2.5 px-4 bg-inputFill rounded-xl flex items-center justify-between">
-              +91 {profile?.phone}
+              +91 {profile?.phone || profile?.mobile || '—'}
               <span className="text-xs text-muted font-jakarta">Cannot change</span>
             </p>
           </div>

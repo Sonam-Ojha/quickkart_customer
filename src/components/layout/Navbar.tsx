@@ -138,7 +138,7 @@ export default function Navbar() {
                   <div className="absolute right-0 top-12 bg-white rounded-xl border border-border shadow-card w-48 py-1 z-50">
                     <div className="px-4 py-2 border-b border-border">
                       <p className="font-inter font-semibold text-sm text-ink truncate">{user.name}</p>
-                      <p className="font-jakarta text-xs text-muted">{user.phone}</p>
+                      <p className="font-jakarta text-xs text-muted">{user.phone || user.mobile || user.email || ''}</p>
                     </div>
                     <Link
                       to="/profile"
