@@ -141,6 +141,13 @@ export default function Navbar() {
                       <p className="font-jakarta text-xs text-muted">{user.phone}</p>
                     </div>
                     <Link
+                      to="/profile"
+                      onClick={() => setProfileOpen(false)}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-jakarta text-ink hover:bg-inputFill transition-colors"
+                    >
+                      <User size={14} /> My Profile
+                    </Link>
+                    <Link
                       to="/orders"
                       onClick={() => setProfileOpen(false)}
                       className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-jakarta text-ink hover:bg-inputFill transition-colors"

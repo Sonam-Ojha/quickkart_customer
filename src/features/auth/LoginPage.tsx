@@ -1,359 +1,172 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Phone, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Truck, Zap, AlertCircle } from 'lucide-react'
+import { Phone, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 
-type Mode = 'login' | 'register' | 'otp'
-
 export default function LoginPage() {
-  const navigate          = useNavigate()
-  const [searchParams]    = useSearchParams()
-  const redirectTo        = searchParams.get('redirect') ?? '/home'
-  const setAuth           = useAuthStore(s => s.setAuth)
-  const [mode, setMode]   = useState<Mode>('login')
-  const [showPwd, setShowPwd] = useState(false)
-  const [form, setForm]   = useState({ name: '', identifier: '', mobile: '', password: '' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const navigate       = useNavigate()
+  const [params]       = useSearchParams()
+  const redirectTo     = params.get('redirect') ?? '/home'
+  const setAuth        = useAuthStore(s => s.setAuth)
 
-  // OTP login state
-  const [otpContact, setOtpContact] = useState('')
-  const [otpStep, setOtpStep]       = useState<'input' | 'verify'>('input')
-  const [otpDigits, setOtpDigits]   = useState('')
-  const [otpSending, setOtpSending] = useState(false)
-  const [devOtp, setDevOtp]         = useState<string | null>(null)
+  const [mobile, setMobile]   = useState('')
+  const [step, setStep]       = useState<'mobile' | 'otp'>('mobile')
+  const [otp, setOtp]         = useState('')
+  const [sending, setSending] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [error, setError]     = useState('')
+  const [devOtp, setDevOtp]   = useState<string | null>(null)
 
-  const handleSendOtp = async () => {
-    if (!otpContact.trim()) return
-    setOtpSending(true); setError(''); setDevOtp(null)
+  const sendOtp = async () => {
+    if (mobile.length !== 10) { setError('Enter a valid 10-digit mobile number'); return }
+    setSending(true); setError(''); setDevOtp(null)
     try {
-      const { data } = await api.post('/otp/send', { mobile: otpContact })
+      const { data } = await api.post('/otp/send', { mobile })
       if (data.devOtp) setDevOtp(data.devOtp)
-      setOtpStep('verify')
+      setStep('otp')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to send OTP')
-    } finally { setOtpSending(false) }
+    } finally { setSending(false) }
   }
 
-  const handleOtpLogin = async () => {
-    if (otpDigits.length !== 6) return
-    setLoading(true); setError('')
+  const verifyOtp = async () => {
+    if (otp.length !== 6) return
+    setVerifying(true); setError('')
     try {
-      const { data } = await api.post('/auth/otp-login', { mobile: otpContact, otp: otpDigits })
+      const { data } = await api.post('/auth/otp-login', { mobile, otp })
       setAuth(data.user, data.token)
       navigate(redirectTo)
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Invalid OTP')
-    } finally { setLoading(false) }
-  }
-
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }))
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true); setError('')
-    try {
-      const endpoint = mode === 'login' ? '/auth/login' : '/auth/register'
-      const payload  = mode === 'login'
-        ? { identifier: form.identifier, password: form.password }
-        : { name: form.name, mobile: form.mobile, password: form.password }
-      const { data } = await api.post(endpoint, payload)
-      setAuth(data.user, data.token)
-      navigate(redirectTo)
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setVerifying(false) }
   }
 
   return (
-    <div className="min-h-screen bg-appBackground flex">
-
-      {/* ── Left panel — branding ── */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primaryOrange via-orangeDark to-[#9a3412] flex-col justify-between p-14 relative overflow-hidden">
-        {/* Background circles */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+    <div className="min-h-screen bg-appBackground flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
 
         {/* Logo */}
-        <Link to="/home" className="relative z-10">
-          <span className="font-inter font-black text-4xl text-white">Jhat</span>
-          <span className="font-inter font-black text-4xl text-accentYellow">pats</span>
-        </Link>
-
-        {/* Center content */}
-        <div className="relative z-10 space-y-8">
-          <div>
-            <h1 className="font-inter font-black text-white text-5xl leading-tight">
-              Groceries<br />delivered in<br />
-              <span className="text-accentYellow">10 minutes</span>
-            </h1>
-            <p className="font-jakarta text-white/70 text-lg mt-4">
-              Fresh produce, daily essentials & more — right at your door.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              { Icon: Zap,          text: 'Delivery in 10 minutes guaranteed' },
-              { Icon: ShieldCheck,  text: '100% fresh & quality assured'      },
-              { Icon: Truck,        text: 'Free delivery on orders above ₹99' },
-            ].map(({ Icon, text }) => (
-              <div key={text} className="flex items-center gap-3 text-white/80">
-                <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center shrink-0">
-                  <Icon size={16} className="text-accentYellow" />
-                </div>
-                <span className="font-jakarta text-sm">{text}</span>
-              </div>
-            ))}
-          </div>
+        <div className="text-center mb-8">
+          <Link to="/home">
+            <span className="font-inter font-black text-4xl text-primaryOrange">Jhat</span>
+            <span className="font-inter font-black text-4xl text-deepTeal">pats</span>
+          </Link>
+          <p className="font-jakarta text-textSecondary text-sm mt-2">
+            {step === 'mobile' ? 'Enter your mobile number to continue' : `OTP sent to +91 ${mobile}`}
+          </p>
         </div>
 
-        <p className="font-jakarta text-white/40 text-xs relative z-10">
-          © 2026 Jhatpats · 30,000+ products
-        </p>
-      </div>
+        {/* Card */}
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-4">
 
-      {/* ── Right panel — form ── */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md">
-
-          {/* Mobile logo */}
-          <Link to="/home" className="flex lg:hidden mb-10">
-            <span className="font-inter font-black text-3xl text-primaryOrange">Jhat</span>
-            <span className="font-inter font-black text-3xl text-deepTeal">pats</span>
-          </Link>
-
-          <h2 className="font-inter font-bold text-ink text-3xl mb-1">
-            {mode === 'login' ? 'Welcome back' : 'Create account'}
-          </h2>
-          <p className="font-jakarta text-textSecondary text-sm mb-8">
-            {mode === 'login'
-              ? 'Login to your Jhatpats account'
-              : 'Sign up to start ordering in minutes'}
-          </p>
-
-          {/* Mode toggle */}
-          <div className="flex bg-inputFill rounded-btn p-1 mb-8">
-            {([['login','Login'], ['register','Sign Up'], ['otp','OTP Login']] as [Mode,string][]).map(([m, label]) => (
-              <button key={m} onClick={() => { setMode(m); setError(''); setOtpStep('input') }}
-                className={`flex-1 py-2.5 rounded-lg font-inter font-semibold text-sm transition-all ${
-                  mode === m ? 'bg-white text-ink shadow-sm' : 'text-textSecondary hover:text-ink'
-                }`}>
-                {label}
-              </button>
-            ))}
+          {/* Shield icon */}
+          <div className="flex items-center gap-3 pb-1">
+            <div className="w-10 h-10 rounded-xl bg-orangeTint flex items-center justify-center shrink-0">
+              <ShieldCheck size={20} className="text-primaryOrange" />
+            </div>
+            <div>
+              <p className="font-inter font-bold text-ink text-base leading-tight">
+                {step === 'mobile' ? 'Login with OTP' : 'Enter OTP'}
+              </p>
+              <p className="font-jakarta text-xs text-muted mt-0.5">
+                {step === 'mobile' ? 'No password needed' : 'Check your SMS'}
+              </p>
+            </div>
           </div>
 
-          {/* OTP Login form */}
-          {mode === 'otp' && (
-            <div className="space-y-4">
-              {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600 font-jakarta">
-                  <AlertCircle size={14} className="shrink-0" />{error}
-                </div>
-              )}
-              {otpStep === 'input' ? (
-                <>
-                  <div className="relative">
-                    <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                    <input type="tel" maxLength={10}
-                      placeholder="Enter 10-digit mobile number"
-                      value={otpContact} onChange={e => setOtpContact(e.target.value.replace(/\D/g,'').slice(0,10))}
-                      className="w-full h-12 bg-inputFill border border-border rounded-btn pl-10 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
-                    />
-                  </div>
-                  <button onClick={handleSendOtp} disabled={otpSending || !otpContact.trim()}
-                    className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-btn flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
-                    {otpSending ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <><ArrowRight size={16}/> Send OTP</>}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-textSecondary font-jakarta">
-                    OTP sent to <b>{otpContact}</b>{' '}
-                    <button onClick={() => { setOtpStep('input'); setDevOtp(null) }} className="text-primaryOrange hover:underline">Change</button>
-                  </p>
-                  {devOtp && (
-                    <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                      <span className="text-xl">🔑</span>
-                      <div>
-                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Demo OTP (SMS nahi gaya)</p>
-                        <p className="font-inter font-black text-2xl tracking-widest text-amber-800">{devOtp}</p>
-                      </div>
-                    </div>
-                  )}
-                  <input type="text" inputMode="numeric" maxLength={6}
-                    placeholder="Enter 6-digit OTP"
-                    value={otpDigits} onChange={e => setOtpDigits(e.target.value.replace(/\D/g,'').slice(0,6))}
-                    className="w-full h-12 bg-inputFill border border-border rounded-btn px-4 font-jakarta text-sm text-ink text-center tracking-widest placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
-                  />
-                  <button onClick={handleOtpLogin} disabled={loading || otpDigits.length !== 6}
-                    className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-btn flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
-                    {loading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <>Verify & Login <ArrowRight size={16}/></>}
-                  </button>
-                  <button onClick={handleSendOtp} disabled={otpSending}
-                    className="w-full text-center text-sm text-primaryOrange font-semibold hover:underline disabled:opacity-50">
-                    Resend OTP
-                  </button>
-                </>
-              )}
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 font-jakarta">
+              <AlertCircle size={14} className="shrink-0" />{error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className={`space-y-4 ${mode === 'otp' ? 'hidden' : ''}`}>
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600 font-jakarta">
-                <AlertCircle size={14} className="shrink-0" />{error}
-              </div>
-            )}
-            {mode === 'register' && (
-              <div>
-                <label className="font-inter font-semibold text-ink text-sm block mb-1.5">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="Sonam Ojha"
-                  value={form.name}
-                  onChange={set('name')}
-                  required
-                  className="w-full h-12 bg-inputFill border border-border rounded-btn px-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
-                />
-              </div>
-            )}
-
-            {/* Login: identifier = mobile OR email */}
-            {mode === 'login' ? (
-              <div>
-                <label className="font-inter font-semibold text-ink text-sm block mb-1.5">
-                  Mobile Number or Email
-                </label>
-                <div className="relative">
-                  {/^[^\s@]+@[^\s@]+/.test(form.identifier)
-                    ? <Mail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                    : <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                  }
-                  <input
-                    type="text"
-                    placeholder="98765 43210 or you@email.com"
-                    value={form.identifier}
-                    onChange={set('identifier')}
-                    required
-                    autoComplete="username"
-                    className="w-full h-12 bg-inputFill border border-border rounded-btn pl-10 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
-                  />
-                </div>
-              </div>
-            ) : (
-              /* Register: mobile field */
-              <div>
-                <label className="font-inter font-semibold text-ink text-sm block mb-1.5">
-                  Mobile Number
-                </label>
-                <div className="relative">
-                  <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                  <input
-                    type="tel"
-                    placeholder="98765 43210"
-                    value={form.mobile}
-                    onChange={set('mobile')}
-                    required
-                    maxLength={10}
-                    className="w-full h-12 bg-inputFill border border-border rounded-btn pl-10 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="font-inter font-semibold text-ink text-sm block mb-1.5">
-                Password
-              </label>
+          {step === 'mobile' ? (
+            <>
               <div className="relative">
-                <Lock size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                  <Phone size={15} className="text-muted" />
+                  <span className="font-jakarta text-sm text-muted border-r border-border pr-2">+91</span>
+                </div>
                 <input
-                  type={showPwd ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={form.password}
-                  onChange={set('password')}
-                  required
-                  className="w-full h-12 bg-inputFill border border-border rounded-btn pl-10 pr-12 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={mobile}
+                  onChange={e => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
+                  onKeyDown={e => e.key === 'Enter' && sendOtp()}
+                  placeholder="98765 43210"
+                  autoFocus
+                  className="w-full h-12 bg-inputFill border border-border rounded-btn pl-20 pr-4 font-jakarta text-sm text-ink placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
                 />
+              </div>
+              <button
+                onClick={sendOtp}
+                disabled={sending || mobile.length !== 10}
+                className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-btn flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                {sending
+                  ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : <><ArrowRight size={16} /> Send OTP</>
+                }
+              </button>
+            </>
+          ) : (
+            <>
+              {devOtp && (
+                <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <span className="text-xl">🔑</span>
+                  <div>
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Demo OTP</p>
+                    <p className="font-inter font-black text-2xl tracking-widest text-amber-800">{devOtp}</p>
+                  </div>
+                </div>
+              )}
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={otp}
+                onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
+                onKeyDown={e => e.key === 'Enter' && verifyOtp()}
+                placeholder="• • • • • •"
+                autoFocus
+                className="w-full h-14 bg-inputFill border border-border rounded-btn px-4 font-inter font-bold text-2xl text-ink text-center tracking-[0.4em] placeholder:text-muted outline-none focus:border-primaryOrange focus:bg-white transition-all"
+              />
+              <button
+                onClick={verifyOtp}
+                disabled={verifying || otp.length !== 6}
+                className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-btn flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                {verifying
+                  ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : <>Verify & Login <ArrowRight size={16} /></>
+                }
+              </button>
+              <div className="flex items-center justify-between text-sm font-jakarta">
                 <button
-                  type="button"
-                  onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
+                  onClick={() => { setStep('mobile'); setOtp(''); setError(''); setDevOtp(null) }}
+                  className="text-muted hover:text-ink transition-colors"
                 >
-                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                  ← Change number
+                </button>
+                <button
+                  onClick={sendOtp}
+                  disabled={sending}
+                  className="text-primaryOrange font-semibold hover:underline disabled:opacity-50"
+                >
+                  Resend OTP
                 </button>
               </div>
-            </div>
-
-            {mode === 'login' && (
-              <div className="flex justify-end">
-                <Link to="#" className="font-jakarta text-sm text-primaryOrange hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-12 bg-primaryOrange hover:bg-orangeDark text-white font-inter font-bold text-base rounded-btn shadow-cta flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none mt-2"
-            >
-              {loading ? (
-                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  {mode === 'login' ? 'Login to Jhatpats' : 'Create Account'}
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </form>
-
-          {mode === 'register' && (
-            <p className="font-jakarta text-xs text-muted text-center mt-4">
-              By signing up, you agree to our{' '}
-              <Link to="#" className="text-primaryOrange hover:underline">Terms</Link> &{' '}
-              <Link to="#" className="text-primaryOrange hover:underline">Privacy Policy</Link>
-            </p>
+            </>
           )}
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-appBackground px-3 font-jakarta text-xs text-muted">or continue with</span>
-            </div>
-          </div>
-
-          <button className="w-full h-12 border border-border rounded-btn flex items-center justify-center gap-3 font-inter font-semibold text-sm text-ink hover:bg-inputFill hover:border-ink/20 transition-all">
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            Continue with Google
-          </button>
-
-          <p className="font-jakarta text-sm text-textSecondary text-center mt-6">
-            {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
-            <button
-              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              className="text-primaryOrange font-semibold hover:underline"
-            >
-              {mode === 'login' ? 'Sign up free' : 'Login'}
-            </button>
-          </p>
         </div>
+
+        <p className="font-jakarta text-xs text-muted text-center mt-6">
+          By continuing, you agree to our{' '}
+          <Link to="/info/terms" className="text-primaryOrange hover:underline">Terms</Link> &{' '}
+          <Link to="/info/privacy" className="text-primaryOrange hover:underline">Privacy Policy</Link>
+        </p>
       </div>
     </div>
   )

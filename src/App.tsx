@@ -11,6 +11,7 @@ import LoginPage from '@/features/auth/LoginPage'
 import InfoPage from '@/features/info/InfoPage'
 import OrdersPage from '@/features/orders/OrdersPage'
 import OrderTrackingPage from '@/features/orders/OrderTrackingPage'
+import ProfilePage from '@/features/profile/ProfilePage'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/cart"            element={<CartPage />} />
           <Route path="/orders"          element={<OrdersPage />} />
           <Route path="/orders/:id"      element={<OrderTrackingPage />} />
+          <Route path="/profile"         element={<ProfilePage />} />
           <Route path="/info/:slug"      element={<InfoPage />} />
         </Route>
       </Routes>
