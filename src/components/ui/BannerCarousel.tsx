@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Banner } from '@/types/product'
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 
 export default function BannerCarousel({ banners, desktop }: Props) {
   const [active, setActive] = useState(0)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const id = setInterval(() => setActive((a) => (a + 1) % banners.length), 4000)
@@ -26,7 +28,9 @@ export default function BannerCarousel({ banners, desktop }: Props) {
           return (
             <div
               key={b.id}
-              className={`relative min-w-full rounded-card overflow-hidden flex-shrink-0 ${desktop ? 'h-56 lg:h-64' : 'h-40'}`}
+              onClick={b.ctaLink ? () => navigate(b.ctaLink!) : undefined}
+              role={b.ctaLink ? 'button' : undefined}
+              className={`relative min-w-full rounded-card overflow-hidden flex-shrink-0 ${desktop ? 'h-56 lg:h-64' : 'h-40'} ${b.ctaLink ? 'cursor-pointer' : ''}`}
               style={{ background: hasText ? (b.bgColor || '#1e293b') : 'transparent' }}
             >
               {/* Banner image — full cover for direct-image banners, blended for customized ones */}
