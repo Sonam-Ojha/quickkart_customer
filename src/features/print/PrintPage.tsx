@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { Upload, Clock, Shield, Zap, X, Plus, Minus, CheckCircle, ChevronRight, FileText, Loader2, AlertCircle } from 'lucide-react'
 import { useFaqs } from '@/hooks/useFaqs'
+import { useAuthStore } from '@/store/authStore'
+import LoginOtpModal from '@/components/ui/LoginOtpModal'
 import api from '@/lib/api'
 
 type PrintColor = 'bw' | 'color'
@@ -8,6 +10,7 @@ type PaperSize  = 'A4' | 'A3' | 'Letter'
 type Sides      = 'single' | 'double'
 
 interface UploadedFile {
+  file: File
   name: string
   size: string
   pages: number
@@ -21,6 +24,7 @@ const BW_RATE = 3, COLOR_RATE = 10, DELIVERY = 25
 
 export default function PrintPage() {
   const [files,    setFiles]    = useState<UploadedFile[]>([])
+  const [showLogin, setShowLogin] = useState(false)
   const [color,    setColor]    = useState<PrintColor>('bw')
   const [paper,    setPaper]    = useState<PaperSize>('A4')
   const [sides,    setSides]    = useState<Sides>('single')
@@ -39,7 +43,9 @@ export default function PrintPage() {
   const printCost  = Math.ceil(totalPages * rate * sidesMul * copies)
   const grandTotal = files.length > 0 ? printCost + DELIVERY : 0
 
-  const allUploaded = files.length > 0 && files.every(f => f.url && !f.uploading)
+  // Ready to order as soon as files are picked — login (if needed) happens
+  // inline when "Order Printout" is clicked, not before.
+  const canOrder     = files.length > 0 && !placing
   const anyUploading = files.some(f => f.uploading)
 
   const uploadFile = async (rawFile: File, index: number) => {
@@ -67,23 +73,29 @@ export default function PrintPage() {
     if (!picked.length) return
     e.target.value = ''
 
+    // Upload immediately only if already logged in — otherwise keep the file
+    // locally and upload it once the user logs in at order time.
+    const authed = useAuthStore.getState().isAuthenticated()
+
     const newEntries: UploadedFile[] = picked.map(f => ({
+      file: f,
       name: f.name,
       size: f.size < 1024 * 1024 ? `${(f.size / 1024).toFixed(0)} KB` : `${(f.size / 1024 / 1024).toFixed(1)} MB`,
       pages: 1,
       url: null,
       key: null,
-      uploading: true,
+      uploading: authed,
       error: null,
     }))
 
     setFiles(prev => {
       const merged = [...prev, ...newEntries].slice(0, 20)
       const startIdx = prev.length
-      // Upload each new file
-      picked.forEach((rawFile, i) => {
-        if (startIdx + i < 20) uploadFile(rawFile, startIdx + i)
-      })
+      if (authed) {
+        picked.forEach((rawFile, i) => {
+          if (startIdx + i < 20) uploadFile(rawFile, startIdx + i)
+        })
+      }
       return merged
     })
   }
@@ -99,11 +111,47 @@ export default function PrintPage() {
   }
 
   const handlePlaceOrder = async () => {
-    if (!allUploaded) return
+    if (files.length === 0 || anyUploading) return
+
+    // Not logged in yet — collect mobile + OTP inline, then resume ordering.
+    if (!useAuthStore.getState().isAuthenticated()) {
+      setShowLogin(true)
+      return
+    }
+
     setPlacing(true)
     setPlaceErr(null)
     try {
-      const filePayload = files.map(f => ({ name: f.name, url: f.url!, key: f.key!, pages: f.pages }))
+      // Upload any files still sitting locally (added before login).
+      let workingFiles = files
+      const pendingIdx = files.reduce<number[]>((acc, f, i) => (f.url ? acc : [...acc, i]), [])
+      if (pendingIdx.length) {
+        setFiles(prev => prev.map((f, i) => pendingIdx.includes(i) ? { ...f, uploading: true, error: null } : f))
+        const uploaded = await Promise.all(pendingIdx.map(async (i) => {
+          const f = files[i]
+          try {
+            const form = new FormData()
+            form.append('file', f.file)
+            const { data } = await api.post<{ url: string; key: string }>(
+              '/print/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } },
+            )
+            return { i, url: data.url as string | null, key: data.key as string | null, error: null as string | null }
+          } catch (err: any) {
+            return { i, url: null as string | null, key: null as string | null, error: err?.response?.data?.message ?? 'Upload failed' }
+          }
+        }))
+        workingFiles = files.map((f, i) => {
+          const u = uploaded.find(u => u.i === i)
+          return u ? { ...f, url: u.url, key: u.key, uploading: false, error: u.error } : f
+        })
+        setFiles(workingFiles)
+        if (workingFiles.some(f => f.error)) {
+          setPlaceErr('Some files failed to upload. Please try again.')
+          return
+        }
+      }
+
+      const filePayload = workingFiles.map(f => ({ name: f.name, url: f.url!, key: f.key!, pages: f.pages }))
       const { data } = await api.post<{ id: number }>('/print/orders', {
         files:      filePayload,
         color,
@@ -223,8 +271,12 @@ export default function PrintPage() {
                         <Loader2 size={16} className="animate-spin text-primaryOrange shrink-0" />
                       ) : f.error ? (
                         <AlertCircle size={16} className="text-error shrink-0" title={f.error} />
-                      ) : (
+                      ) : f.url ? (
                         <CheckCircle size={16} className="text-success shrink-0" />
+                      ) : (
+                        <span title="Uploads when you place the order" className="shrink-0">
+                          <Clock size={16} className="text-muted" />
+                        </span>
                       )}
                       <button onClick={() => removeFile(i)}>
                         <X size={16} className="text-muted hover:text-error transition-colors" />
@@ -426,7 +478,7 @@ export default function PrintPage() {
                 )}
                 <button
                   onClick={handlePlaceOrder}
-                  disabled={!allUploaded || placing}
+                  disabled={!canOrder || anyUploading}
                   className="w-full h-12 bg-primaryOrange text-white rounded-btn shadow-cta font-inter font-bold hover:bg-orangeDark transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
                 >
                   {placing ? (
@@ -444,6 +496,13 @@ export default function PrintPage() {
           </div>
         </div>
       </div>
+
+      {showLogin && (
+        <LoginOtpModal
+          onClose={() => setShowLogin(false)}
+          onSuccess={() => { setShowLogin(false); handlePlaceOrder() }}
+        />
+      )}
     </div>
   )
 }

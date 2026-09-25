@@ -133,7 +133,7 @@ function MainCategoryGrid({ categories, loading }: { categories: Category[]; loa
       {loading
         ? Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center gap-2">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-100 animate-pulse" />
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-100 animate-pulse" />
               <div className="w-14 h-3 rounded bg-slate-100 animate-pulse" />
             </div>
           ))
@@ -146,15 +146,15 @@ function MainCategoryGrid({ categories, loading }: { categories: Category[]; loa
                 className="flex flex-col items-center gap-2 group"
               >
                 {/* Icon tile */}
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:scale-[1.05] ${!cat.imageUrl ? iconBg : 'bg-slate-50'}`}>
+                <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:scale-[1.05] ${!cat.imageUrl ? iconBg : 'bg-slate-50'}`}>
                   {cat.imageUrl ? (
                     <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-3xl sm:text-4xl leading-none select-none">{cat.icon || '🛒'}</span>
+                    <span className="text-5xl sm:text-6xl leading-none select-none">{cat.icon || '🛒'}</span>
                   )}
                 </div>
                 {/* Name below — compact, two lines */}
-                <p className="font-inter text-xs sm:text-sm font-semibold text-ink text-center leading-tight line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
+                <p className="font-inter text-[9px] sm:text-[11px] font-semibold text-ink text-center leading-tight line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
                   {cat.name}
                 </p>
               </button>

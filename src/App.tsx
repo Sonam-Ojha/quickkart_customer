@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppShell from '@/components/layout/AppShell'
+import ScrollToTop from '@/components/layout/ScrollToTop'
 import HomePage from '@/features/home/HomePage'
 import CategoryPage from '@/features/category/CategoryPage'
 import ProductDetailPage from '@/features/product/ProductDetailPage'
@@ -16,6 +17,7 @@ import ProfilePage from '@/features/profile/ProfilePage'
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Login — outside AppShell */}
         <Route path="/login" element={<LoginPage />} />
