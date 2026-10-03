@@ -458,7 +458,7 @@ export default function CartDrawer() {
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => setShowAuth(false)} />
 
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
+          <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
             <div className="px-10 pt-4 pb-5">
               <div className="relative flex flex-col items-center text-center">
                 <button

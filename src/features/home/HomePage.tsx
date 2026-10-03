@@ -292,7 +292,7 @@ export default function HomePage() {
         {/* ── QuickPrints CTA ── */}
         <div
           onClick={() => navigate('/print')}
-          className="bg-gradient-to-r from-primaryOrange to-orangeDark rounded-2xl p-6 sm:p-8 flex items-center justify-between gap-4 cursor-pointer hover:opacity-95 transition-opacity"
+          className="bg-primaryOrange rounded-2xl p-6 sm:p-8 flex items-center justify-between gap-4 cursor-pointer hover:opacity-95 transition-opacity"
         >
           <div className="text-white">
             <p className="font-inter font-black text-2xl sm:text-3xl">QuickPrints</p>

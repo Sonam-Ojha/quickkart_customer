@@ -47,7 +47,7 @@ export default function LoginOtpModal({ onClose, onSuccess }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl">
+      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between px-8 pt-8 pb-5">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
