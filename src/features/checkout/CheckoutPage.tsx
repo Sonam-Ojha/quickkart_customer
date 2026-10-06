@@ -8,6 +8,9 @@ import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
 import { useSettings } from '@/hooks/useSettings'
 import api from '@/lib/api'
+import { useLocationStore } from '@/store/locationStore'
+import LocationModal from '@/components/location/LocationModal'
+import { useActiveOrderStore } from '@/store/activeOrderStore'
 
 declare global { interface Window { Razorpay: any } }
 
@@ -51,6 +54,7 @@ export default function CheckoutPage() {
   const [showAddrForm, setShowAddrForm]   = useState(false)
   const [savingAddr, setSavingAddr]       = useState(false)
   const [newAddr, setNewAddr]             = useState({ label: 'Home', line1: '', line2: '', city: '', pincode: '' })
+  const [locOpen, setLocOpen]             = useState(false)
 
   const itemList = Object.values(items)
 
@@ -106,6 +110,17 @@ export default function CheckoutPage() {
     }
   }
 
+  // Delivery coordinates — the backend fulfils from the store whose radius
+  // covers them (and refuses when none does). Selected address first, else the
+  // location picked in the header.
+  const deliveryCoords = (): { lat: number; lng: number } | null => {
+    const addr = addresses.find(a => a.id === selectedAddr)
+    if (addr?.lat != null && addr?.lng != null) return { lat: Number(addr.lat), lng: Number(addr.lng) }
+    const cur = useLocationStore.getState().current
+    if (cur?.lat != null && cur?.lng != null) return { lat: cur.lat, lng: cur.lng }
+    return null
+  }
+
   const placeOrder = async (extraPayload = {}) => {
     await api.post('/orders', {
       items: itemList.map(i => ({ id: i.id, product_id: i.id, price: i.price, qty: i.qty })),
@@ -113,9 +128,10 @@ export default function CheckoutPage() {
       delivery_fee:    deliveryFee,
       handling_charge: handlingCharge,
       address_id:      selectedAddr ?? undefined,
+      ...deliveryCoords(),
       ...extraPayload,
     })
-    setSuccess(true)
+    setSuccess(true); useActiveOrderStore.getState().refresh()
     clear()
     setTimeout(() => navigate('/orders'), 3000)
   }
@@ -130,7 +146,7 @@ export default function CheckoutPage() {
   const placeOrderRazorpay = async () => {
     setPlacing(true); setError('')
     try {
-      const { data: rz } = await api.post('/payments/razorpay/create', { amount: grandTotal })
+      const { data: rz } = await api.post('/payments/razorpay/create', { amount: grandTotal, ...deliveryCoords() })
       const options = {
         key: rz.key, amount: rz.amount, currency: 'INR',
         name: 'Jhatpats', description: 'Order Payment',
@@ -146,8 +162,9 @@ export default function CheckoutPage() {
               items: itemList.map(i => ({ id: i.id, product_id: i.id, price: i.price, qty: i.qty })),
               delivery_fee: deliveryFee, handling_charge: handlingCharge,
               address_id: selectedAddr ?? undefined,
+              ...deliveryCoords(),
             })
-            setSuccess(true); clear()
+            setSuccess(true); useActiveOrderStore.getState().refresh(); clear()
             setTimeout(() => navigate('/orders'), 3000)
           } catch { setError('Payment verification failed. Contact support.') }
           finally { setPlacing(false) }
@@ -161,7 +178,15 @@ export default function CheckoutPage() {
     }
   }
 
-  const handlePay = () => payMethod === 'cod' ? placeOrderCod() : placeOrderRazorpay()
+  const handlePay = () => {
+    // A location is only required here, at checkout.
+    if (!deliveryCoords()) {
+      setError('Please set your delivery location to place the order.')
+      setLocOpen(true)
+      return
+    }
+    return payMethod === 'cod' ? placeOrderCod() : placeOrderRazorpay()
+  }
 
   if (success) return (
     <div className="min-h-screen flex items-center justify-center bg-appBackground px-4">
@@ -183,6 +208,8 @@ export default function CheckoutPage() {
   )
 
   return (
+    <>
+    <LocationModal open={locOpen} onClose={() => { setLocOpen(false); setError('') }} />
     <div className="min-h-screen bg-appBackground">
       {/* Header */}
       <div className="bg-white border-b border-border px-4 h-14 flex items-center gap-3 sticky top-0 z-10">
@@ -386,5 +413,6 @@ export default function CheckoutPage() {
         <p className="text-center font-jakarta text-xs text-muted pb-4">🔒 Safe & secure checkout</p>
       </div>
     </div>
+    </>
   )
 }

@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import CartDrawer from '@/components/cart/CartDrawer'
+import ActiveOrderBar from './ActiveOrderBar'
 
 export default function AppShell() {
   return (
@@ -12,6 +13,7 @@ export default function AppShell() {
       </main>
       <Footer />
       <CartDrawer />
+      <ActiveOrderBar />
     </div>
   )
 }

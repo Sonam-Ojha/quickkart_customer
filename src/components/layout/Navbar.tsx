@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { MapPin, Search, ShoppingCart, ShoppingBag, ChevronDown, User, X, LogOut } from 'lucide-react'
+import { MapPin, MapPinOff, Search, ShoppingCart, ShoppingBag, ChevronDown, User, X, LogOut } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
 import { useAuthStore } from '@/store/authStore'
 import { useLocationStore, getLocation } from '@/store/locationStore'
+import { useIsUnavailable } from '@/store/storefrontStore'
 import LocationModal from '@/components/location/LocationModal'
 
 
@@ -18,6 +19,7 @@ export default function Navbar() {
   const logout    = useAuthStore((s) => s.logout)
   const locationState = useLocationStore()
   const loc           = getLocation(locationState)
+  const unavailable   = useIsUnavailable()
   const [locOpen, setLocOpen]     = useState(false)
   const [q, setQ]                 = useState('')
   const [focused, setFocused]     = useState(false)
@@ -32,6 +34,17 @@ export default function Navbar() {
   useEffect(() => {
     if (!location.pathname.includes('search')) setQ('')
   }, [location.pathname])
+
+  // First visit without a location: offer the picker once per browser session.
+  // It's optional — close it and browse; the address is asked for at checkout.
+  useEffect(() => {
+    if (locationState.current) return
+    try {
+      if (sessionStorage.getItem('qk-loc-prompted')) return
+      sessionStorage.setItem('qk-loc-prompted', '1')
+    } catch { /* storage blocked — still prompt */ }
+    setLocOpen(true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -58,18 +71,27 @@ export default function Navbar() {
             onClick={() => setLocOpen(true)}
             className="order-3 flex flex-1 min-w-0 lg:flex-none lg:min-w-[170px] items-center gap-2 lg:gap-2.5 group hover:bg-inputFill rounded-xl px-2 py-1.5 lg:-mx-2 transition-colors"
           >
-            <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-btn bg-orangeTint flex items-center justify-center shrink-0">
-              <MapPin size={16} className="text-primaryOrange lg:hidden" />
-              <MapPin size={17} className="text-primaryOrange hidden lg:block" />
+            <div className={`w-8 h-8 lg:w-9 lg:h-9 rounded-btn flex items-center justify-center shrink-0 ${unavailable ? 'bg-errorBg' : 'bg-orangeTint'}`}>
+              {unavailable ? (
+                <MapPinOff size={17} className="text-error" />
+              ) : (
+                <>
+                  <MapPin size={16} className="text-primaryOrange lg:hidden" />
+                  <MapPin size={17} className="text-primaryOrange hidden lg:block" />
+                </>
+              )}
             </div>
-            {/* Desktop: two-line "Deliver to" block */}
+            {/* Desktop: two-line "Deliver to" block — or, when no store covers the
+                location, "Currently unavailable" in place of the address */}
             <div className="hidden lg:block text-left">
-              <p className="font-jakarta text-xs text-muted leading-none">Deliver to</p>
-              <p className="font-inter font-bold text-ink text-sm leading-snug flex items-center gap-1 mt-0.5 max-w-[140px] truncate">
-                {loc.area.split(',')[0]}
+              <p className={`font-jakarta text-xs leading-none ${unavailable ? 'text-error font-semibold' : 'text-muted'}`}>
+                {unavailable ? 'Currently unavailable' : 'Deliver to'}
+              </p>
+              <p className="font-inter font-bold text-ink text-sm leading-snug flex items-center gap-1 mt-0.5 max-w-[200px] truncate">
+                <span className="truncate">{unavailable ? 'Delivery not available at your location' : loc.area.split(',')[0]}</span>
                 <ChevronDown size={12} className="text-muted mt-px shrink-0" />
               </p>
-              {loc.pincode && (
+              {!unavailable && loc.pincode && (
                 <p className="font-jakarta text-xs text-muted leading-none mt-0.5">
                   {loc.pincode}
                 </p>
@@ -77,8 +99,8 @@ export default function Navbar() {
             </div>
             {/* Mobile: single-line area label */}
             <span className="lg:hidden flex items-center gap-0.5 min-w-0">
-              <span className="font-inter font-bold text-ink text-sm truncate">
-                {loc.area.split(',')[0]}
+              <span className={`font-inter font-bold text-sm truncate ${unavailable ? 'text-error' : 'text-ink'}`}>
+                {unavailable ? 'Currently unavailable' : loc.area.split(',')[0]}
               </span>
               <ChevronDown size={12} className="text-muted shrink-0" />
             </span>

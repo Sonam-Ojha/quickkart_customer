@@ -8,6 +8,10 @@ export interface Product {
   badge?: 'bestseller' | 'deal' | 'fresh' | 'new'
   category?: string
   subcategory?: string
+  /** Sold at a store that covers the customer's location (false when no
+   *  location is set yet or no store delivers there). */
+  available?: boolean
+  /** False only when the store tracks this product's stock and it has run out. */
   inStock?: boolean
 }
 

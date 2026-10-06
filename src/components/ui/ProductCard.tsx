@@ -1,6 +1,6 @@
 import { Plus, Minus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useCartStore } from '@/store/cartStore'
+import { useCartStore, isOutOfStock } from '@/store/cartStore'
 import type { Product } from '@/types/product'
 import ProductImage from './ProductImage'
 
@@ -25,6 +25,7 @@ export default function ProductCard({ product }: Props) {
   const decrement = useCartStore((s) => s.decrement)
 
   const qty     = items[product.id]?.qty ?? 0
+  const soldOut = isOutOfStock(product)
   const disc    = product.originalPrice > product.price
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0
@@ -37,12 +38,12 @@ export default function ProductCard({ product }: Props) {
           src={product.img}
           alt={product.name}
           category={product.category}
-          className={`w-full h-full ${product.inStock === false ? 'opacity-50' : ''}`}
+          className={`w-full h-full ${soldOut ? 'opacity-50' : ''}`}
           imgClassName="object-contain p-5 pb-0"
           emojiSize="text-5xl"
           onClick={() => navigate(`/product/${product.id}`)}
         />
-        {product.inStock === false ? (
+        {soldOut ? (
           <span className="absolute top-2 left-2 text-2xs font-inter font-bold px-2 py-0.5 rounded-full bg-slate-600 text-white">
             OUT OF STOCK
           </span>
@@ -51,7 +52,7 @@ export default function ProductCard({ product }: Props) {
             {badgeConfig[product.badge].label}
           </span>
         ) : null}
-        {product.inStock !== false && disc > 0 && (
+        {!soldOut && disc > 0 && (
           <span className="absolute top-2 right-2 bg-success text-white text-2xs font-inter font-bold px-2 py-0.5 rounded-full">
             {disc}% off
           </span>
@@ -81,7 +82,7 @@ export default function ProductCard({ product }: Props) {
             )}
           </div>
 
-          {product.inStock === false ? (
+          {soldOut ? (
             <button
               disabled
               className="h-9 px-3 bg-slate-100 border border-slate-200 text-slate-400 rounded-btn font-inter font-bold text-xs uppercase tracking-wide cursor-not-allowed shrink-0"

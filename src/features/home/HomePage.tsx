@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import BannerCarousel from '@/components/ui/BannerCarousel'
 import ProductCard from '@/components/ui/ProductCard'
 import CountdownTimer from '@/components/ui/CountdownTimer'
@@ -15,7 +16,7 @@ interface ServiceStatus { isOpen: boolean; message?: string; reopensAt?: string;
 function useServiceStatus() {
   const [status, setStatus] = useState<ServiceStatus | null>(null)
   useEffect(() => {
-    api.get<ServiceStatus>('/api/app/service-status')
+    api.get<ServiceStatus>('/service-status')
       .then(r => setStatus(r.data))
       .catch(() => setStatus({ isOpen: true }))
   }, [])
@@ -172,7 +173,8 @@ export default function HomePage() {
 
   const { data: heroBanners = [], isLoading: bannersLoading } = useBanners('hero')
   const { data: promoRaw   = [], isLoading: promosLoading  } = useBanners('promo')
-  const { data: categories = [], isLoading: catsLoading    } = useCategories()
+  const { data: categories = [], isLoading: catsLoading, isError: catsError } = useCategories()
+  const queryClient = useQueryClient()
 
   const promoTiles: PromoTileData[] = promoRaw.map(b => ({
     title: b.title,
@@ -185,7 +187,7 @@ export default function HomePage() {
   }))
 
   // Homepage special sections
-  const { data: dealData,  isLoading: dealLoading  } = useProducts({ tag: 'deal',       limit: 8 })
+  const { data: dealData,  isLoading: dealLoading, isError: dealError } = useProducts({ tag: 'deal', limit: 8 })
   const { data: bestData,  isLoading: bestLoading  } = useProducts({ tag: 'bestseller', limit: 8 })
 
   const dealProducts = dealData?.products  ?? []
@@ -203,6 +205,24 @@ export default function HomePage() {
           reopensAt={serviceStatus.reopensAt}
           nextShiftName={serviceStatus.nextShiftName}
         />
+      </div>
+    )
+  }
+
+  // Backend unreachable — say so with a Retry, rather than an empty page that
+  // looks like the catalogue is empty.
+  if (catsError && dealError) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-6 text-center">
+        <p className="font-jakarta text-textSecondary text-base max-w-sm mb-5">
+          Couldn't load products. Check your connection and try again.
+        </p>
+        <button
+          onClick={() => queryClient.refetchQueries({ type: 'active' })}
+          className="h-11 px-6 border border-deepTeal text-deepTeal hover:bg-tealTint rounded-btn font-inter font-semibold text-sm transition-colors"
+        >
+          Retry
+        </button>
       </div>
     )
   }

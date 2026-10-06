@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppShell from '@/components/layout/AppShell'
 import ScrollToTop from '@/components/layout/ScrollToTop'
+import StorefrontSync from '@/components/layout/StorefrontSync'
+import Toast from '@/components/ui/Toast'
 import HomePage from '@/features/home/HomePage'
 import CategoryPage from '@/features/category/CategoryPage'
 import ProductDetailPage from '@/features/product/ProductDetailPage'
@@ -18,6 +20,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <StorefrontSync />
+      <Toast />
       <Routes>
         {/* Login — outside AppShell */}
         <Route path="/login" element={<LoginPage />} />

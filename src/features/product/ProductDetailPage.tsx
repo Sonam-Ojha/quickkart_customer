@@ -4,7 +4,7 @@ import Breadcrumb from '@/components/ui/Breadcrumb'
 import ProductImage from '@/components/ui/ProductImage'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { useCartStore } from '@/store/cartStore'
+import { useCartStore, isOutOfStock } from '@/store/cartStore'
 import { useProducts } from '@/hooks/useProducts'
 import { useSettings, parseWhyItems } from '@/hooks/useSettings'
 import ProductCard from '@/components/ui/ProductCard'
@@ -143,12 +143,12 @@ export default function ProductDetailPage() {
           )}
 
           {/* Add to Cart */}
-          {product.inStock === false ? (
+          {isOutOfStock(product) ? (
             <div className="w-full sm:w-64">
               <div className="h-12 bg-slate-100 border border-slate-200 text-slate-400 rounded-btn font-inter font-bold text-base flex items-center justify-center cursor-not-allowed">
                 Out of Stock
               </div>
-              <p className="text-xs text-muted text-center mt-2">Currently unavailable at your location</p>
+              <p className="text-xs text-muted text-center mt-2">This item is out of stock right now</p>
             </div>
           ) : qty === 0 ? (
             <button

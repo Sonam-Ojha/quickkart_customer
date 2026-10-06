@@ -4,6 +4,7 @@ import {
   Loader2, AlertCircle, CheckCircle2, RotateCcw,
 } from 'lucide-react'
 import { useLocationStore, SavedLocation } from '@/store/locationStore'
+import AddressDetailsForm from './AddressDetailsForm'
 import { useGeoLocation } from '@/hooks/useGeoLocation'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:4000'
@@ -13,6 +14,9 @@ const GKEY     = import.meta.env.VITE_GOOGLE_MAPS_KEY as string
 let _mapsReady: Promise<void> | null = null
 function ensureMaps(): Promise<void> {
   if ((window as any).google?.maps?.places) return Promise.resolve()
+  // No key configured — skip Google entirely so callers fall straight back
+  // to the backend instead of loading a script that never answers.
+  if (!GKEY) return Promise.reject(new Error('VITE_GOOGLE_MAPS_KEY not set'))
   if (_mapsReady) return _mapsReady
   _mapsReady = new Promise<void>((resolve, reject) => {
     const s = document.createElement('script')
@@ -31,7 +35,25 @@ interface Prediction {
   _lat?: number; _lng?: number; _addr?: any  // set for Nominatim fallback results
 }
 
-async function googleSearch(q: string): Promise<Prediction[]> {
+// Google can stay silent (script blocked, key/API not enabled — the callback
+// never fires), which used to leave search/GPS spinning forever. Every Google
+// call gets a few seconds, then resolves to its "no result" value so the
+// caller falls back to the backend.
+const GOOGLE_TIMEOUT_MS = 4000
+
+function withGoogleTimeout<T>(work: Promise<T>, fallback: T, what: string): Promise<T> {
+  const timeout = new Promise<T>((resolve) =>
+    setTimeout(() => {
+      console.warn(`[LocationModal] Google ${what} timed out — falling back`)
+      resolve(fallback)
+    }, GOOGLE_TIMEOUT_MS),
+  )
+  return Promise.race([work, timeout])
+}
+
+const googleSearch = (q: string) => withGoogleTimeout(googleSearchRaw(q), [] as Prediction[], 'Places search')
+
+async function googleSearchRaw(q: string): Promise<Prediction[]> {
   try {
     await ensureMaps()
   } catch {
@@ -61,7 +83,9 @@ async function googleSearch(q: string): Promise<Prediction[]> {
   })
 }
 
-async function googlePlaceCoords(placeId: string): Promise<{ lat: number; lng: number } | null> {
+const googlePlaceCoords = (placeId: string) => withGoogleTimeout(googlePlaceCoordsRaw(placeId), null, 'place details')
+
+async function googlePlaceCoordsRaw(placeId: string): Promise<{ lat: number; lng: number } | null> {
   try {
     await ensureMaps()
   } catch { return null }
@@ -99,7 +123,10 @@ function isCityOnly(addr: AddrResult | null): boolean {
 
 // Google reverse geocode — much better sub-locality / sector data for Indian
 // cities. No-ops gracefully (returns null) when VITE_GOOGLE_MAPS_KEY is absent.
-async function googleReverseGeocode(lat: number, lng: number): Promise<AddrResult | null> {
+const googleReverseGeocode = (lat: number, lng: number) =>
+  withGoogleTimeout(googleReverseGeocodeRaw(lat, lng), null, 'reverse geocode')
+
+async function googleReverseGeocodeRaw(lat: number, lng: number): Promise<AddrResult | null> {
   try {
     await ensureMaps()
   } catch { return null }
@@ -186,6 +213,8 @@ export default function LocationModal({ open, onClose }: Props) {
   // When GPS/search gives coords, show a confirmation card before saving
   const [pending,      setPending]     = useState<SavedLocation | null>(null)
   const [pendingLoading, setPendingLoading] = useState(false)
+  // Step 2: the confirmed spot, awaiting name / phone / house / landmark
+  const [details,      setDetails]     = useState<SavedLocation | null>(null)
 
   // Manual entry fields
   const [manualArea,    setManualArea]    = useState('')
@@ -201,7 +230,7 @@ export default function LocationModal({ open, onClose }: Props) {
   useEffect(() => {
     if (open) {
       setTab('auto')
-      setQuery(''); setPredictions([]); setPending(null); setPendingLoading(false)
+      setQuery(''); setPredictions([]); setPending(null); setPendingLoading(false); setDetails(null)
       setManualArea(''); setManualCity(''); setManualPincode(''); setManualError('')
       resetGps()
       ensureMaps().catch(() => {})
@@ -224,9 +253,8 @@ export default function LocationModal({ open, onClose }: Props) {
       ...(coords ?? {}),
       source:  'manual' as any,
     }
-    setLocation({ ...loc, capturedAt: Date.now() })
     setManualSaving(false)
-    onClose()
+    setDetails(loc)
   }
 
   // GPS success → reverse geocode → show confirmation card
@@ -261,14 +289,31 @@ export default function LocationModal({ open, onClose }: Props) {
             { signal: AbortSignal.timeout(8000) })
           if (res.ok) {
             const data = await res.json()
-            const nominatimResults: Prediction[] = (data.results || []).map((r: any, i: number) => ({
-              placeId: `nominatim-${i}-${r.lat}-${r.lng}`,
-              mainText: r.area?.split(',')[0] || r.city || query,
-              secondaryText: r.area || '',
-              _lat: r.lat,
-              _lng: r.lng,
-              _addr: r,
-            }))
+            // Title = the place's own name ("IIT Delhi"), subtitle = the next few
+            // address parts — not the area, which made every result read
+            // "Hauz Khas". Drop exact duplicates the geocoder sometimes returns.
+            const seen = new Set<string>()
+            const nominatimResults: Prediction[] = (data.results || [])
+              .filter((r: any) => {
+                const key = r.displayName || `${r.lat},${r.lng}`
+                if (seen.has(key)) return false
+                seen.add(key)
+                return true
+              })
+              .map((r: any, i: number) => {
+                const parts = String(r.displayName || '')
+                  .split(',')
+                  .map((p) => p.trim())
+                  .filter((p) => p && p !== 'India' && !/^\d+$/.test(p))
+                return {
+                  placeId: `nominatim-${i}-${r.lat}-${r.lng}`,
+                  mainText: parts[0] || r.area?.split(',')[0] || r.city || query,
+                  secondaryText: parts.slice(1, 4).join(', ') || r.area || '',
+                  _lat: r.lat,
+                  _lng: r.lng,
+                  _addr: r,
+                }
+              })
             results = nominatimResults
             console.log('[Search] Nominatim fallback results:', results.length)
           }
@@ -305,9 +350,14 @@ export default function LocationModal({ open, onClose }: Props) {
     })
   }
 
+  // Confirmed spot → ask for the full address in the same modal.
   const handleConfirm = () => {
     if (!pending) return
-    setLocation({ ...pending, capturedAt: Date.now() })
+    setDetails(pending)
+  }
+
+  const handleDetailsSaved = (loc: SavedLocation) => {
+    setLocation({ ...loc, capturedAt: Date.now() })
     onClose()
   }
 
@@ -333,8 +383,14 @@ export default function LocationModal({ open, onClose }: Props) {
             <MapPin size={16} className="text-primaryOrange" />
           </div>
           <div className="flex-1">
-            <p className="font-inter font-bold text-ink text-sm leading-none">Set delivery location</p>
-            {current?.area && (
+            <p className="font-inter font-bold text-ink text-sm leading-none">
+              {details ? 'Enter address details' : 'Set delivery location'}
+            </p>
+            {details ? (
+              <button onClick={() => setDetails(null)} className="font-jakarta text-xs text-primaryOrange hover:underline mt-0.5">
+                ← Change location
+              </button>
+            ) : current?.area && (
               <p className="font-jakarta text-xs text-muted mt-0.5 truncate max-w-[260px]">{current.area}</p>
             )}
           </div>
@@ -343,6 +399,11 @@ export default function LocationModal({ open, onClose }: Props) {
           </button>
         </div>
 
+        {details ? (
+          <div className="p-4 overflow-y-auto flex-1">
+            <AddressDetailsForm location={details} onSaved={handleDetailsSaved} />
+          </div>
+        ) : (<>
         {/* ── Tabs ── */}
         <div className="flex border-b border-border shrink-0">
           {(['auto', 'manual'] as Tab[]).map((t) => (
@@ -587,6 +648,7 @@ export default function LocationModal({ open, onClose }: Props) {
             </div>
           )}
         </div>
+        </>)}
       </div>
     </div>
   )

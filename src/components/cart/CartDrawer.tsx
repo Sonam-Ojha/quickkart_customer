@@ -17,6 +17,9 @@ import ProductImage from '@/components/ui/ProductImage'
 import { useOrderStore } from '@/store/orderStore'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
+import { useLocationStore } from '@/store/locationStore'
+import LocationModal from '@/components/location/LocationModal'
+import { useActiveOrderStore } from '@/store/activeOrderStore'
 
 const DELIVERY_FEE    = 25
 const FREE_DELIVERY   = 99
@@ -50,6 +53,7 @@ export default function CartDrawer() {
   const [devOtp, setDevOtp]             = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [placing, setPlacing]           = useState(false)
+  const [locOpen, setLocOpen]           = useState(false)
   const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollRef   = useRef<HTMLDivElement>(null)
   const closeBtnRef = useRef<HTMLButtonElement>(null)
@@ -122,6 +126,7 @@ export default function CartDrawer() {
 
   const handleOrderSuccess = (orderId?: number) => {
     recordOrder(itemList, grandTotal)
+    useActiveOrderStore.getState().refresh()
     setPlacedTotal(grandTotal)
     setShowAuth(false)
     setSuccess(true)
@@ -135,6 +140,15 @@ export default function CartDrawer() {
 
   const placeOrder = async () => {
     if (itemList.length === 0 || success || placing) return
+    // A location is only required here, at checkout. The backend fulfils from
+    // the store whose radius covers it (and refuses when none does).
+    const cur = useLocationStore.getState().current
+    if (cur?.lat == null || cur?.lng == null) {
+      setOtpError('Please set your delivery location to place the order.')
+      setLocOpen(true)
+      return
+    }
+    const coords = { lat: cur.lat, lng: cur.lng }
     setPlacing(true); setOtpError('')
 
     try {
@@ -144,12 +158,13 @@ export default function CartDrawer() {
           payment_method:  'cod',
           delivery_fee:    deliveryFee,
           handling_charge: HANDLING_CHARGE,
+          ...coords,
         })
         handleOrderSuccess(placed?.id)
 
       } else {
         // Razorpay — create order → open checkout → verify
-        const { data: rzpData } = await api.post('/payments/razorpay/create', { amount: grandTotal })
+        const { data: rzpData } = await api.post('/payments/razorpay/create', { amount: grandTotal, ...coords })
 
         // Load Razorpay script if not already loaded
         if (!(window as any).Razorpay) {
@@ -179,6 +194,7 @@ export default function CartDrawer() {
                   items:               orderItems,
                   delivery_fee:        deliveryFee,
                   handling_charge:     HANDLING_CHARGE,
+                  ...coords,
                 })
                 handleOrderSuccess(verified?.id)
                 resolve()
@@ -195,7 +211,8 @@ export default function CartDrawer() {
         })
       }
     } catch (e: any) {
-      setOtpError(e?.message ?? 'Failed to place order. Try again.')
+      // Prefer the server's reason (e.g. "Delivery is not available at this address").
+      setOtpError(e?.response?.data?.message ?? e?.message ?? 'Failed to place order. Try again.')
     } finally {
       setPlacing(false)
     }
@@ -244,6 +261,8 @@ export default function CartDrawer() {
   }
 
   return (
+    <>
+    <LocationModal open={locOpen} onClose={() => { setLocOpen(false); setOtpError('') }} />
     <>
       {/* Backdrop */}
       <div
@@ -626,6 +645,7 @@ export default function CartDrawer() {
           </div>
         </div>
       )}
+    </>
     </>
   )
 }
