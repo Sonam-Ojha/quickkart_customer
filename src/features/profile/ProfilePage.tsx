@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { User, Phone, Mail, Edit3, Check, AlertCircle, Loader2, ShoppingBag, MapPin, LogOut } from 'lucide-react'
+import { User, Phone, Mail, Edit3, Check, AlertCircle, Loader2, ShoppingBag, MapPin, LogOut, Trash2 } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 
@@ -58,7 +58,43 @@ export default function ProfilePage() {
     } finally { setSaving(false) }
   }
 
+  const [deleteModal,  setDeleteModal]  = useState(false)
+  const [deleteStep,   setDeleteStep]   = useState<'reason'|'otp'>('reason')
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleteOtp,    setDeleteOtp]    = useState('')
+  const [otpSending,   setOtpSending]   = useState(false)
+  const [deleting,     setDeleting]     = useState(false)
+  const [deleteError,  setDeleteError]  = useState('')
+
   const handleLogout = () => { logout(); navigate('/home') }
+
+  const openDeleteModal = () => {
+    setDeleteModal(true); setDeleteStep('reason')
+    setDeleteReason(''); setDeleteOtp(''); setDeleteError('')
+  }
+
+  const sendDeleteOtp = async () => {
+    if (!deleteReason.trim()) { setDeleteError('Please enter a reason'); return }
+    setOtpSending(true); setDeleteError('')
+    try {
+      const mobile = profile?.mobile || profile?.phone
+      await api.post('/otp/send', { mobile })
+      setDeleteStep('otp')
+    } catch (e: any) {
+      setDeleteError(e?.response?.data?.message ?? 'Failed to send OTP')
+    } finally { setOtpSending(false) }
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteOtp.trim()) { setDeleteError('Please enter OTP'); return }
+    setDeleting(true); setDeleteError('')
+    try {
+      await api.delete('/auth/account', { data: { otp: deleteOtp, reason: deleteReason } })
+      logout(); navigate('/home')
+    } catch (e: any) {
+      setDeleteError(e?.response?.data?.message ?? 'Failed to delete account')
+    } finally { setDeleting(false) }
+  }
 
   if (loading) {
     return (
@@ -204,10 +240,75 @@ export default function ProfilePage() {
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 h-11 border border-red-200 text-red-500 font-inter font-semibold text-sm rounded-xl hover:bg-red-50 transition-colors"
+        className="w-full flex items-center justify-center gap-2 h-11 border border-red-200 text-red-500 font-inter font-semibold text-sm rounded-xl hover:bg-red-50 transition-colors mb-3"
       >
         <LogOut size={16} /> Logout
       </button>
+
+      {/* Delete Account */}
+      <button
+        onClick={openDeleteModal}
+        className="w-full flex items-center justify-center gap-2 h-11 border border-red-300 bg-red-50 text-red-600 font-inter font-semibold text-sm rounded-xl hover:bg-red-100 transition-colors"
+      >
+        <Trash2 size={16} /> Delete Account
+      </button>
+
+      {/* Delete Account Modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="font-inter font-bold text-ink text-lg mb-1">Delete Account</h3>
+            <p className="font-jakarta text-sm text-muted mb-5">
+              {deleteStep === 'reason'
+                ? 'Please tell us why you want to delete your account.'
+                : `Enter the OTP sent to +91 ${profile?.mobile || profile?.phone}`}
+            </p>
+
+            {deleteError && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 mb-4">
+                <AlertCircle size={14} className="shrink-0" /> {deleteError}
+              </div>
+            )}
+
+            {deleteStep === 'reason' ? (
+              <textarea
+                value={deleteReason}
+                onChange={e => setDeleteReason(e.target.value)}
+                placeholder="e.g. I no longer use this app"
+                rows={3}
+                className="w-full bg-inputFill border border-border rounded-xl px-4 py-3 font-jakarta text-sm text-ink outline-none focus:border-primaryOrange resize-none mb-4"
+              />
+            ) : (
+              <input
+                value={deleteOtp}
+                onChange={e => setDeleteOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="Enter 6-digit OTP"
+                maxLength={6}
+                className="w-full h-11 bg-inputFill border border-border rounded-xl px-4 font-jakarta text-sm text-ink outline-none focus:border-primaryOrange mb-4 tracking-widest text-center text-lg"
+              />
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => deleteStep === 'otp' ? setDeleteStep('reason') : setDeleteModal(false)}
+                className="flex-1 h-11 border border-border rounded-xl font-inter font-semibold text-sm text-ink hover:bg-inputFill"
+              >
+                {deleteStep === 'otp' ? 'Back' : 'Cancel'}
+              </button>
+              <button
+                onClick={deleteStep === 'reason' ? sendDeleteOtp : confirmDelete}
+                disabled={otpSending || deleting}
+                className="flex-1 h-11 bg-red-500 hover:bg-red-600 text-white rounded-xl font-inter font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {(otpSending || deleting)
+                  ? <Loader2 size={16} className="animate-spin" />
+                  : deleteStep === 'reason' ? 'Send OTP' : 'Delete Account'
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
