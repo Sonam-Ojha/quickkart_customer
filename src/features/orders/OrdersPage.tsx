@@ -14,18 +14,26 @@ const STATUS_META: Record<string, { label: string; color: string; icon: React.Re
 }
 
 export default function OrdersPage() {
-  const token = useAuthStore((s) => s.token)
+  const token       = useAuthStore((s) => s.token)
+  const hasHydrated = useAuthStore((s) => s._hasHydrated)
   const [orders, setOrders]   = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
 
   useEffect(() => {
+    if (!hasHydrated) return
     if (!token) { setLoading(false); return }
     api.get('/orders')
       .then((r) => setOrders(r.data))
       .catch(() => setError('Failed to load orders'))
       .finally(() => setLoading(false))
-  }, [token])
+  }, [token, hasHydrated])
+
+  if (!hasHydrated || loading) return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <Loader2 size={28} className="animate-spin text-primaryOrange" />
+    </div>
+  )
 
   if (!token) return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-6">

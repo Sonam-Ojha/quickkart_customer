@@ -8,97 +8,36 @@ import AddressDetailsForm from './AddressDetailsForm'
 import { useGeoLocation } from '@/hooks/useGeoLocation'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:4000'
-const GKEY     = import.meta.env.VITE_GOOGLE_MAPS_KEY as string
 
-// ── Google Maps / Places loader ───────────────────────────────────────────────
-let _mapsReady: Promise<void> | null = null
-function ensureMaps(): Promise<void> {
-  if ((window as any).google?.maps?.places) return Promise.resolve()
-  // No key configured — skip Google entirely so callers fall straight back
-  // to the backend instead of loading a script that never answers.
-  if (!GKEY) return Promise.reject(new Error('VITE_GOOGLE_MAPS_KEY not set'))
-  if (_mapsReady) return _mapsReady
-  _mapsReady = new Promise<void>((resolve, reject) => {
-    const s = document.createElement('script')
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${GKEY}&libraries=places&language=en&region=IN`
-    s.async = true
-    s.onload  = () => resolve()
-    s.onerror = () => { _mapsReady = null; reject() }
-    document.head.appendChild(s)
-  })
-  return _mapsReady
-}
-
-// ── Google Places autocomplete ────────────────────────────────────────────────
+// ── Search via backend proxy (Google Places → Nominatim fallback) ─────────────
 interface Prediction {
   placeId: string; mainText: string; secondaryText: string
   _lat?: number; _lng?: number; _addr?: any  // set for Nominatim fallback results
 }
 
-// Google can stay silent (script blocked, key/API not enabled — the callback
-// never fires), which used to leave search/GPS spinning forever. Every Google
-// call gets a few seconds, then resolves to its "no result" value so the
-// caller falls back to the backend.
-const GOOGLE_TIMEOUT_MS = 4000
-
-function withGoogleTimeout<T>(work: Promise<T>, fallback: T, what: string): Promise<T> {
-  const timeout = new Promise<T>((resolve) =>
-    setTimeout(() => {
-      console.warn(`[LocationModal] Google ${what} timed out — falling back`)
-      resolve(fallback)
-    }, GOOGLE_TIMEOUT_MS),
-  )
-  return Promise.race([work, timeout])
-}
-
-const googleSearch = (q: string) => withGoogleTimeout(googleSearchRaw(q), [] as Prediction[], 'Places search')
-
-async function googleSearchRaw(q: string): Promise<Prediction[]> {
+// Backend proxy: /api/app/location/places uses Google Places API server-side
+async function backendSearch(q: string): Promise<Prediction[]> {
   try {
-    await ensureMaps()
+    const res = await fetch(`${API_BASE}/api/app/location/places?q=${encodeURIComponent(q)}`,
+      { signal: AbortSignal.timeout(6000) })
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data.predictions || []) as Prediction[]
   } catch {
-    console.warn('[LocationModal] Google Maps script failed to load')
     return []
   }
-  const g = (window as any).google
-  if (!g?.maps?.places) {
-    console.warn('[LocationModal] google.maps.places not available')
-    return []
-  }
-
-  // AutocompleteService (works with Places API that is already enabled)
-  return new Promise((resolve) => {
-    new g.maps.places.AutocompleteService().getPlacePredictions(
-      { input: q, componentRestrictions: { country: 'in' }, types: ['geocode', 'establishment'] },
-      (preds: any[] | null, status: string) => {
-        console.log('[Places] status:', status, '| results:', preds?.length ?? 0)
-        if (status !== 'OK' || !preds) return resolve([])
-        resolve(preds.map((p: any) => ({
-          placeId:       p.place_id,
-          mainText:      p.structured_formatting?.main_text ?? p.description?.split(',')[0] ?? '',
-          secondaryText: p.structured_formatting?.secondary_text ?? '',
-        })))
-      },
-    )
-  })
 }
 
-const googlePlaceCoords = (placeId: string) => withGoogleTimeout(googlePlaceCoordsRaw(placeId), null, 'place details')
-
-async function googlePlaceCoordsRaw(placeId: string): Promise<{ lat: number; lng: number } | null> {
+// Backend proxy: /api/app/location/places/details returns lat/lng + address
+async function backendPlaceDetails(placeId: string): Promise<{ lat: number; lng: number; area?: string; pincode?: string } | null> {
   try {
-    await ensureMaps()
-  } catch { return null }
-  const g = (window as any).google
-  return new Promise((resolve) => {
-    new g.maps.places.PlacesService(document.createElement('div')).getDetails(
-      { placeId, fields: ['geometry'] },
-      (place: any, status: string) => {
-        if (status !== 'OK' || !place?.geometry?.location) return resolve(null)
-        resolve({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() })
-      },
-    )
-  })
+    const res = await fetch(`${API_BASE}/api/app/location/places/details?place_id=${encodeURIComponent(placeId)}`,
+      { signal: AbortSignal.timeout(6000) })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
 }
 
 // ── Backend reverse geocode (free, Nominatim proxy) ───────────────────────────
@@ -113,50 +52,6 @@ async function reverseGeocode(lat: number, lng: number): Promise<AddrResult | nu
       { signal: AbortSignal.timeout(10000) })
     return res.ok ? (await res.json()) as AddrResult : null
   } catch { return null }
-}
-
-// True when a reverse-geocode result only resolved to city level (no sector/street).
-function isCityOnly(addr: AddrResult | null): boolean {
-  if (!addr || !addr.area) return true
-  return addr.area === addr.city || !addr.area.includes(',')
-}
-
-// Google reverse geocode — much better sub-locality / sector data for Indian
-// cities. No-ops gracefully (returns null) when VITE_GOOGLE_MAPS_KEY is absent.
-const googleReverseGeocode = (lat: number, lng: number) =>
-  withGoogleTimeout(googleReverseGeocodeRaw(lat, lng), null, 'reverse geocode')
-
-async function googleReverseGeocodeRaw(lat: number, lng: number): Promise<AddrResult | null> {
-  try {
-    await ensureMaps()
-  } catch { return null }
-  const g = (window as any).google
-  if (!g?.maps?.Geocoder) return null
-  return new Promise((resolve) => {
-    new g.maps.Geocoder().geocode(
-      { location: { lat, lng } },
-      (results: any[] | null, status: string) => {
-        if (status !== 'OK' || !results?.length) return resolve(null)
-        const best = results.find((r) => !r.types?.includes('plus_code')) || results[0]
-        const get = (type: string): string =>
-          best.address_components?.find((c: any) => c.types.includes(type))?.long_name || ''
-        const micro = get('sublocality_level_2') || get('sublocality_level_1') ||
-                      get('sublocality') || get('neighborhood')
-        const route = get('route')
-        const city  = get('locality') || get('administrative_area_level_2') ||
-                      get('administrative_area_level_3')
-        resolve({
-          locality:         micro || route || city || 'Current Location',
-          area:             [route, micro, city].filter(Boolean).join(', ') || best.formatted_address || '',
-          city,
-          state:            get('administrative_area_level_1'),
-          postalCode:       get('postal_code'),
-          country:          get('country'),
-          formattedAddress: best.formatted_address || '',
-        })
-      },
-    )
-  })
 }
 
 function toSavedLocation(
@@ -233,7 +128,6 @@ export default function LocationModal({ open, onClose }: Props) {
       setQuery(''); setPredictions([]); setPending(null); setPendingLoading(false); setDetails(null)
       setManualArea(''); setManualCity(''); setManualPincode(''); setManualError('')
       resetGps()
-      ensureMaps().catch(() => {})
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [open, resetGps])
@@ -257,22 +151,16 @@ export default function LocationModal({ open, onClose }: Props) {
     setDetails(loc)
   }
 
-  // GPS success → reverse geocode → show confirmation card
+  // GPS success → reverse geocode via backend (uses Google internally) → show confirmation card
   useEffect(() => {
     if (gpsStatus.kind !== 'success') return
     const { coords } = gpsStatus
     setPendingLoading(true)
     setPending({ label: 'Detecting…', area: '', pincode: '', lat: coords.lat, lng: coords.lng, accuracy: coords.accuracy, source: 'gps' })
-    reverseGeocode(coords.lat, coords.lng)
-      .then(async (addr) => {
-        // Backend (OSM) only gave a city — try Google for sector/street detail.
-        if (isCityOnly(addr)) return (await googleReverseGeocode(coords.lat, coords.lng)) || addr
-        return addr
-      })
-      .then((addr) => {
-        setPending(toSavedLocation(addr, coords.lat, coords.lng, coords.accuracy))
-        setPendingLoading(false)
-      })
+    reverseGeocode(coords.lat, coords.lng).then((addr) => {
+      setPending(toSavedLocation(addr, coords.lat, coords.lng, coords.accuracy))
+      setPendingLoading(false)
+    })
   }, [gpsStatus])
 
   // Debounced search: Google Places first, fallback to backend Nominatim
@@ -282,18 +170,16 @@ export default function LocationModal({ open, onClose }: Props) {
     debRef.current = setTimeout(async () => {
       setSearching(true)
       try {
-        let results = await googleSearch(query)
+        // Try backend Google Places proxy first
+        let results = await backendSearch(query)
         if (results.length === 0) {
-          // Fallback: backend Nominatim search
+          // Fallback: Nominatim search
           const res = await fetch(`${API_BASE}/api/app/location/search?q=${encodeURIComponent(query)}`,
             { signal: AbortSignal.timeout(8000) })
           if (res.ok) {
             const data = await res.json()
-            // Title = the place's own name ("IIT Delhi"), subtitle = the next few
-            // address parts — not the area, which made every result read
-            // "Hauz Khas". Drop exact duplicates the geocoder sometimes returns.
             const seen = new Set<string>()
-            const nominatimResults: Prediction[] = (data.results || [])
+            results = (data.results || [])
               .filter((r: any) => {
                 const key = r.displayName || `${r.lat},${r.lng}`
                 if (seen.has(key)) return false
@@ -303,8 +189,8 @@ export default function LocationModal({ open, onClose }: Props) {
               .map((r: any, i: number) => {
                 const parts = String(r.displayName || '')
                   .split(',')
-                  .map((p) => p.trim())
-                  .filter((p) => p && p !== 'India' && !/^\d+$/.test(p))
+                  .map((p: string) => p.trim())
+                  .filter((p: string) => p && p !== 'India' && !/^\d+$/.test(p))
                 return {
                   placeId: `nominatim-${i}-${r.lat}-${r.lng}`,
                   mainText: parts[0] || r.area?.split(',')[0] || r.city || query,
@@ -314,8 +200,6 @@ export default function LocationModal({ open, onClose }: Props) {
                   _addr: r,
                 }
               })
-            results = nominatimResults
-            console.log('[Search] Nominatim fallback results:', results.length)
           }
         }
         setPredictions(results)
@@ -339,15 +223,18 @@ export default function LocationModal({ open, onClose }: Props) {
       return
     }
 
-    // Google Places: fetch coords via PlacesService
-    const coords = await googlePlaceCoords(pred.placeId)
-    if (!coords) { setSearching(false); return }
-    setPending({ label: pred.mainText, area: pred.secondaryText, pincode: '', lat: coords.lat, lng: coords.lng, source: 'search' })
-    setPendingLoading(true); setSearching(false)
-    reverseGeocode(coords.lat, coords.lng).then((addr) => {
-      setPending(toSavedLocation(addr, coords.lat, coords.lng, undefined, pred.mainText, 'search'))
-      setPendingLoading(false)
+    // Backend proxy: fetch coords + address via /places/details
+    const details = await backendPlaceDetails(pred.placeId)
+    if (!details) { setSearching(false); return }
+    setPending({
+      label:   pred.mainText,
+      area:    details.area || pred.secondaryText,
+      pincode: details.pincode || '',
+      lat:     details.lat,
+      lng:     details.lng,
+      source:  'search',
     })
+    setSearching(false)
   }
 
   // Confirmed spot → ask for the full address in the same modal.

@@ -15,10 +15,11 @@ interface Profile {
 
 export default function ProfilePage() {
   const navigate   = useNavigate()
-  const storeUser  = useAuthStore(s => s.user)
-  const storeToken = useAuthStore(s => s.token)
-  const setAuth    = useAuthStore(s => s.setAuth)
-  const logout     = useAuthStore(s => s.logout)
+  const storeUser    = useAuthStore(s => s.user)
+  const storeToken   = useAuthStore(s => s.token)
+  const hasHydrated  = useAuthStore(s => s._hasHydrated)
+  const setAuth      = useAuthStore(s => s.setAuth)
+  const logout       = useAuthStore(s => s.logout)
 
   const [profile,  setProfile]  = useState<Profile | null>(null)
   const [loading,  setLoading]  = useState(true)
@@ -31,6 +32,7 @@ export default function ProfilePage() {
   const [email, setEmail] = useState('')
 
   useEffect(() => {
+    if (!hasHydrated) return
     if (!storeToken) { navigate('/login?redirect=/profile'); return }
     api.get('/profile').then(({ data }) => {
       setProfile(data)
@@ -39,7 +41,7 @@ export default function ProfilePage() {
     }).catch(() => {
       setError('Could not load profile')
     }).finally(() => setLoading(false))
-  }, [storeToken, navigate])
+  }, [storeToken, hasHydrated, navigate])
 
   const save = async () => {
     if (!name.trim()) { setError('Name cannot be empty'); return }
@@ -96,7 +98,7 @@ export default function ProfilePage() {
     } finally { setDeleting(false) }
   }
 
-  if (loading) {
+  if (!hasHydrated || loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 size={28} className="animate-spin text-primaryOrange" />
