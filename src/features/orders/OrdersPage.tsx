@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ShoppingBag, ChevronRight, Clock, CheckCircle2, XCircle, Loader2, Package } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
+import { useLoginUi } from '@/store/loginUiStore'
 
 const STATUS_META: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   pending:          { label: 'Order Placed',     color: 'text-orange-500 bg-orange-50',  icon: <Clock size={13} /> },
@@ -41,9 +42,9 @@ export default function OrdersPage() {
         <ShoppingBag size={28} className="text-primaryOrange" />
       </div>
       <p className="font-inter font-bold text-ink text-lg">Login to see your orders</p>
-      <Link to="/login" className="h-10 px-6 bg-primaryOrange text-white rounded-btn font-inter font-semibold text-sm flex items-center">
+      <button onClick={() => useLoginUi.getState().open()} className="h-10 px-6 bg-primaryOrange text-white rounded-btn font-inter font-semibold text-sm flex items-center">
         Login
-      </Link>
+      </button>
     </div>
   )
 

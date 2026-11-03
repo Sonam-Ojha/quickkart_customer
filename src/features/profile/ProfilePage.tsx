@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { User, Phone, Mail, Edit3, Check, AlertCircle, Loader2, ShoppingBag, MapPin, LogOut, Trash2 } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
+import { useLoginUi } from '@/store/loginUiStore'
 
 interface Profile {
   id: string
@@ -33,7 +34,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!hasHydrated) return
-    if (!storeToken) { navigate('/login?redirect=/profile'); return }
+    if (!storeToken) { navigate('/home', { replace: true }); useLoginUi.getState().open('/profile'); return }
     api.get('/profile').then(({ data }) => {
       setProfile(data)
       setName(data.name ?? '')

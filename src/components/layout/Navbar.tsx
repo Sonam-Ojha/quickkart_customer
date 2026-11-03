@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { MapPin, MapPinOff, Search, ShoppingCart, ShoppingBag, ChevronDown, User, X, LogOut } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCartUi } from '@/store/cartUiStore'
+import { useLoginUi } from '@/store/loginUiStore'
 import { useAuthStore } from '@/store/authStore'
 import { useLocationStore, getLocation } from '@/store/locationStore'
 import { useIsUnavailable } from '@/store/storefrontStore'
@@ -17,6 +18,7 @@ export default function Navbar() {
   const openCart  = useCartUi((s) => s.open)
   const user      = useAuthStore((s) => s.user)
   const logout    = useAuthStore((s) => s.logout)
+  const openLogin = useLoginUi((s) => s.open)
   const locationState = useLocationStore()
   const loc           = getLocation(locationState)
   const unavailable   = useIsUnavailable()
@@ -186,13 +188,14 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <Link
-                to="/login"
+              <button
+                type="button"
+                onClick={() => openLogin()}
                 className="flex items-center gap-2 h-10 px-3 lg:px-5 rounded-btn border border-border font-inter font-semibold text-sm text-textSecondary hover:border-primaryOrange hover:text-primaryOrange transition-all whitespace-nowrap"
               >
                 <User size={16} className="shrink-0" />
                 <span className="hidden sm:inline">Login</span>
-              </Link>
+              </button>
             )}
 
             {/* Cart */}

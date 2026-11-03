@@ -1,21 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Trash2, Plus, Minus, ShoppingBag, ChevronRight, Tag, Loader2 } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useSettings } from '@/hooks/useSettings'
 import { useProducts } from '@/hooks/useProducts'
 import { useAuthStore } from '@/store/authStore'
+import { useLoginUi } from '@/store/loginUiStore'
 import ProductCard from '@/components/ui/ProductCard'
 import ProductImage from '@/components/ui/ProductImage'
-import OtpModal from '@/components/ui/OtpModal'
 import api from '@/lib/api'
 
 export default function CartPage() {
   const navigate        = useNavigate()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
-  const userMobile      = useAuthStore((s) => s.user?.mobile ?? s.user?.phone ?? '')
 
-  const [showOtpModal, setShowOtpModal] = useState(isAuthenticated)
   const [coupon,         setCoupon]         = useState('')
   const [couponDiscount, setCouponDiscount] = useState(0)
   const [couponMsg,      setCouponMsg]      = useState('')
@@ -55,22 +53,15 @@ export default function CartPage() {
     } finally { setApplying(false) }
   }
 
-  // Not logged in → redirect
-  if (!isAuthenticated) {
-    navigate('/login?redirect=/cart')
-    return null
-  }
+  // Not logged in → back to home with the login modal on top
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/home', { replace: true })
+      useLoginUi.getState().open('/cart')
+    }
+  }, [isAuthenticated, navigate])
 
-  // Show OTP verification first
-  if (showOtpModal) {
-    return (
-      <OtpModal
-        mobile={userMobile}
-        onVerified={() => setShowOtpModal(false)}
-        onClose={() => navigate(-1)}
-      />
-    )
-  }
+  if (!isAuthenticated) return null
 
   // Empty cart
   if (itemList.length === 0) {

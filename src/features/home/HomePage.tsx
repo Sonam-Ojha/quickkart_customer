@@ -134,7 +134,7 @@ function MainCategoryGrid({ categories, loading }: { categories: Category[]; loa
       {loading
         ? Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center gap-2">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-100 animate-pulse" />
+              <div className="w-full max-w-[7rem] aspect-square rounded-2xl bg-slate-100 animate-pulse" />
               <div className="w-14 h-3 rounded bg-slate-100 animate-pulse" />
             </div>
           ))
@@ -147,15 +147,15 @@ function MainCategoryGrid({ categories, loading }: { categories: Category[]; loa
                 className="flex flex-col items-center gap-2 group"
               >
                 {/* Icon tile */}
-                <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:scale-[1.05] ${!cat.imageUrl ? iconBg : 'bg-slate-50'}`}>
+                <div className={`w-full max-w-[7rem] aspect-square rounded-2xl overflow-hidden flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:scale-[1.05] ${!cat.imageUrl ? iconBg : 'bg-slate-50'}`}>
                   {cat.imageUrl ? (
                     <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-5xl sm:text-6xl leading-none select-none">{cat.icon || '🛒'}</span>
+                    <span className="text-4xl sm:text-5xl lg:text-6xl leading-none select-none">{cat.icon || '🛒'}</span>
                   )}
                 </div>
                 {/* Name below — compact, two lines */}
-                <p className="font-inter text-[9px] sm:text-[11px] font-semibold text-ink text-center leading-tight line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
+                <p className="font-inter text-[11px] sm:text-xs font-semibold text-ink text-center leading-tight line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
                   {cat.name}
                 </p>
               </button>
@@ -235,6 +235,7 @@ export default function HomePage() {
         {/* Horizontal inset matches the visual gap the category icons sit in
             (icon width vs. its grid column width) so the banner's edges line
             up with the outermost category icons, not the full grid track. */}
+        {(bannersLoading || heroBanners.length > 0) && (
         <div className="px-[calc((100%_-_36px)/8_-_32px)] sm:px-[calc((100%_-_48px)/10_-_40px)] md:px-[calc((100%_-_60px)/12_-_40px)] lg:px-[calc((100%_-_84px)/16_-_40px)] xl:px-[calc((100%_-_108px)/20_-_40px)]">
           {bannersLoading ? (
             <div className="w-full h-56 lg:h-64 rounded-card bg-gray-100 animate-pulse" />
@@ -242,6 +243,7 @@ export default function HomePage() {
             <BannerCarousel banners={heroBanners} desktop />
           ) : null}
         </div>
+        )}
 
         {/* ── Main categories grid ── */}
         {(catsLoading || mainCategories.length > 0) && (

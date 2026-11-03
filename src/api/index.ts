@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
+import { useLoginUi } from '@/store/loginUiStore'
 
 export const api = axios.create({
   baseURL: (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_BASE_URL ?? 'http://localhost:4000',
@@ -17,7 +18,7 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       useAuthStore.getState().logout()
-      window.location.href = '/login'
+      useLoginUi.getState().open()
     }
     return Promise.reject(err)
   },

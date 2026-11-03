@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Phone, ArrowRight, ShieldCheck, X, AlertCircle } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ArrowLeft, ShoppingBag } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 
@@ -8,136 +8,207 @@ interface Props {
   onSuccess: () => void
 }
 
+const EMPTY_OTP = ['', '', '', '', '', '']
+
 // Inline mobile-number + OTP login, used to authenticate without leaving the
-// current page/flow (e.g. mid-checkout or mid-print-order).
+// current page/flow (header Login, mid-checkout, mid-print-order). Same
+// branded look as the cart's checkout login.
 export default function LoginOtpModal({ onClose, onSuccess }: Props) {
   const setAuth = useAuthStore(s => s.setAuth)
 
-  const [mobile, setMobile]       = useState('')
-  const [step, setStep]           = useState<'mobile' | 'otp'>('mobile')
-  const [otp, setOtp]             = useState('')
-  const [sending, setSending]     = useState(false)
-  const [verifying, setVerifying] = useState(false)
-  const [error, setError]         = useState('')
-  const [devOtp, setDevOtp]       = useState<string | null>(null)
+  const [mobile, setMobile]   = useState('')
+  const [step, setStep]       = useState<'mobile' | 'otp'>('mobile')
+  const [otp, setOtp]         = useState(EMPTY_OTP)
+  const [busy, setBusy]       = useState(false)
+  const [error, setError]     = useState('')
+  const [devOtp, setDevOtp]   = useState<string | null>(null)
+  const phoneRef = useRef<HTMLInputElement>(null)
+  const otpRefs  = useRef<Array<HTMLInputElement | null>>([])
+
+  const otpValue = otp.join('')
+
+  useEffect(() => {
+    if (step === 'mobile') phoneRef.current?.focus()
+    else otpRefs.current[0]?.focus()
+  }, [step])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') back() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
+  const back = () => {
+    if (step === 'otp') { setStep('mobile'); setError(''); setDevOtp(null) }
+    else onClose()
+  }
 
   const sendOtp = async () => {
-    if (mobile.length !== 10) { setError('Enter a valid 10-digit mobile number'); return }
-    setSending(true); setError(''); setDevOtp(null)
+    if (mobile.length !== 10 || busy) return
+    setBusy(true); setError(''); setDevOtp(null)
     try {
       const { data } = await api.post('/otp/send', { mobile })
       if (data.devOtp) setDevOtp(data.devOtp)
+      setOtp(EMPTY_OTP)
       setStep('otp')
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Failed to send OTP')
-    } finally { setSending(false) }
+    } finally { setBusy(false) }
   }
 
   const verifyOtp = async () => {
-    if (otp.length !== 6) return
-    setVerifying(true); setError('')
+    if (otpValue.length !== 6 || busy) return
+    setBusy(true); setError('')
     try {
-      const { data } = await api.post('/auth/otp-login', { mobile, otp })
+      const { data } = await api.post('/auth/otp-login', { mobile, otp: otpValue })
       setAuth(data.user, data.token)
       onSuccess()
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Invalid OTP')
-    } finally { setVerifying(false) }
+      setOtp(EMPTY_OTP)
+      otpRefs.current[0]?.focus()
+    } finally { setBusy(false) }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl">
-        <div className="flex items-center justify-between px-8 pt-8 pb-5">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
-              <ShieldCheck size={26} className="text-orange-500" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900 text-lg">{step === 'mobile' ? 'Login to continue' : 'Enter OTP'}</p>
-              <p className="text-sm text-gray-500 mt-0.5">{step === 'mobile' ? 'No password needed' : `OTP sent to +91 ${mobile}`}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 shrink-0"><X size={24} /></button>
-        </div>
+  const setOtpDigit = (i: number, val: string) => {
+    const d = val.replace(/\D/g, '').slice(-1)
+    setOtp(prev => { const n = [...prev]; n[i] = d; return n })
+    setError('')
+    if (d && i < 5) otpRefs.current[i + 1]?.focus()
+  }
 
-        <div className="px-8 pb-8 space-y-5">
-          {error && (
-            <div className="flex items-center gap-2 p-3.5 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
-              <AlertCircle size={15} className="shrink-0" />{error}
+  const ctaClass = (enabled: boolean) =>
+    `mt-5 w-full h-14 rounded-btn font-inter font-bold text-base transition-colors ${
+      enabled ? 'bg-primaryOrange text-white shadow-cta hover:bg-orangeDark' : 'bg-muted text-white cursor-not-allowed'
+    }`
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+
+      <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
+        <div className="px-6 sm:px-10 pt-4 pb-5">
+          <div className="relative flex flex-col items-center text-center">
+            <button
+              onClick={back}
+              aria-label="Back"
+              className="absolute left-0 top-3.5 w-9 h-9 flex items-center justify-center rounded-full hover:bg-inputFill transition-colors"
+            >
+              <ArrowLeft size={22} className="text-ink" />
+            </button>
+            <div className="w-16 h-16 rounded-2xl bg-primaryOrange flex items-center justify-center shadow-cta mb-4">
+              <ShoppingBag size={30} className="text-white" />
             </div>
-          )}
+            <span className="font-inter font-black text-2xl tracking-tight">
+              <span className="text-primaryOrange">Jhat</span>
+              <span className="text-deepTeal">pats</span>
+            </span>
+
+            {step === 'mobile' ? (
+              <>
+                <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Groceries in 10 minutes</h3>
+                <p className="font-jakarta text-textSecondary text-base mt-1.5">Log in or Sign up</p>
+              </>
+            ) : (
+              <>
+                <h3 className="font-inter font-extrabold text-ink text-2xl mt-4">Verify your number</h3>
+                <p className="font-jakarta text-textSecondary text-base mt-1.5">
+                  OTP sent to +91 {mobile}{' '}
+                  <button onClick={back} className="text-primaryOrange font-semibold hover:underline">
+                    Change
+                  </button>
+                </p>
+              </>
+            )}
+          </div>
 
           {step === 'mobile' ? (
             <>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
-                  <Phone size={17} className="text-gray-400" />
-                  <span className="text-base text-gray-400 border-r border-gray-200 pr-2.5">+91</span>
-                </div>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={10}
-                  value={mobile}
-                  onChange={e => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
-                  onKeyDown={e => e.key === 'Enter' && sendOtp()}
-                  placeholder="98765 43210"
-                  autoFocus
-                  className="w-full h-14 bg-gray-50 border border-gray-200 rounded-xl pl-24 pr-4 text-base text-gray-900 placeholder:text-gray-400 outline-none focus:border-orange-400 focus:bg-white transition-all"
+              <div className="mt-6 flex items-center h-14 bg-white border border-border rounded-btn px-4 focus-within:border-primaryOrange focus-within:ring-2 focus-within:ring-primaryOrange/15 transition-all">
+                <span className="font-inter font-bold text-ink text-base">+91</span>
+                <span className="w-px h-6 bg-border mx-3.5" />
+                <input ref={phoneRef} value={mobile}
+                  onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') sendOtp() }}
+                  type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="Enter mobile number"
+                  className="flex-1 min-w-0 bg-transparent font-jakarta text-base text-ink placeholder:text-muted outline-none border-none"
                 />
               </div>
-              <button
-                onClick={sendOtp}
-                disabled={sending || mobile.length !== 10}
-                className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-bold text-base rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-              >
-                {sending
-                  ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  : <><ArrowRight size={18} /> Send OTP</>}
+
+              {error && <p className="mt-2 text-sm text-red-500 text-center">{error}</p>}
+
+              <button onClick={sendOtp} disabled={busy || mobile.length !== 10}
+                className={ctaClass(!busy && mobile.length === 10)}>
+                {busy ? 'Sending OTP…' : 'Continue'}
               </button>
             </>
           ) : (
             <>
               {devOtp && (
-                <div className="flex items-center gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl">
+                <div className="mt-5 flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                   <span className="text-2xl">🔑</span>
                   <div>
                     <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Demo OTP</p>
-                    <p className="font-black text-2xl tracking-widest text-amber-800">{devOtp}</p>
+                    <p className="font-inter font-black text-2xl tracking-widest text-amber-800">{devOtp}</p>
                   </div>
                 </div>
               )}
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={otp}
-                onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
-                onKeyDown={e => e.key === 'Enter' && verifyOtp()}
-                placeholder="• • • • • •"
-                autoFocus
-                className="w-full h-16 bg-gray-50 border border-gray-200 rounded-xl px-4 font-bold text-3xl text-gray-900 text-center tracking-[0.4em] placeholder:text-gray-400 outline-none focus:border-orange-400 focus:bg-white transition-all"
-              />
-              <button
-                onClick={verifyOtp}
-                disabled={verifying || otp.length !== 6}
-                className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-bold text-base rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-              >
-                {verifying
-                  ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  : <>Verify & Login <ArrowRight size={18} /></>}
+              <div className="mt-8 flex justify-between gap-2">
+                {otp.map((d, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { otpRefs.current[i] = el }}
+                    value={d}
+                    onChange={(e) => setOtpDigit(i, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Backspace' && !otp[i] && i > 0) {
+                        otpRefs.current[i - 1]?.focus()
+                        setOtp(prev => { const n = [...prev]; n[i - 1] = ''; return n })
+                      } else if (e.key === 'Enter') {
+                        verifyOtp()
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault()
+                      const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).split('')
+                      if (!digits.length) return
+                      const n = [...EMPTY_OTP]
+                      digits.forEach((dg, idx) => { n[idx] = dg })
+                      setOtp(n)
+                      otpRefs.current[Math.min(digits.length, 5)]?.focus()
+                    }}
+                    inputMode="numeric"
+                    autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                    maxLength={1}
+                    className="flex-1 min-w-0 h-14 text-center font-inter font-bold text-xl text-ink bg-white border border-border rounded-btn outline-none focus:border-primaryOrange focus:ring-2 focus:ring-primaryOrange/15 transition-all"
+                  />
+                ))}
+              </div>
+
+              {error && <p className="mt-2 text-sm text-red-500 text-center">{error}</p>}
+
+              <button onClick={verifyOtp} disabled={otpValue.length !== 6 || busy}
+                className={ctaClass(otpValue.length === 6 && !busy)}>
+                {busy ? 'Verifying…' : 'Verify & Continue'}
               </button>
-              <div className="flex items-center justify-between text-sm">
-                <button onClick={() => { setStep('mobile'); setOtp(''); setError(''); setDevOtp(null) }} className="text-gray-400 hover:text-gray-600 transition-colors">
-                  ← Change number
-                </button>
-                <button onClick={sendOtp} disabled={sending} className="text-orange-500 font-semibold hover:underline disabled:opacity-50">
+
+              <p className="mt-4 text-center font-jakarta text-sm text-textSecondary">
+                Didn&apos;t receive the code?{' '}
+                <button onClick={sendOtp} disabled={busy}
+                  className="text-primaryOrange font-semibold hover:underline disabled:opacity-50">
                   Resend OTP
                 </button>
-              </div>
+              </p>
             </>
           )}
+        </div>
+
+        <div className="border-t border-border px-6 sm:px-10 py-4 text-center">
+          <p className="font-jakarta text-13 text-muted">
+            By continuing, you agree to our{' '}
+            <a href="/info/terms-of-service" target="_blank" className="text-textSecondary underline hover:text-primary">Terms of service</a> &{' '}
+            <a href="/info/privacy-policy" target="_blank" className="text-textSecondary underline hover:text-primary">Privacy policy</a>
+          </p>
         </div>
       </div>
     </div>

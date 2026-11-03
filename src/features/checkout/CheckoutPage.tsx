@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
+import { useLoginUi } from '@/store/loginUiStore'
 import { useSettings } from '@/hooks/useSettings'
 import api from '@/lib/api'
 import { useLocationStore } from '@/store/locationStore'
@@ -60,7 +61,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!hasHydrated) return
-    if (!isAuth) { navigate('/login?redirect=/checkout'); return }
+    if (!isAuth) { navigate('/home', { replace: true }); useLoginUi.getState().open('/checkout'); return }
     if (itemList.length === 0 && !success) navigate('/cart')
   }, [hasHydrated, isAuth, itemList.length])
 

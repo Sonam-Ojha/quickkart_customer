@@ -98,8 +98,13 @@ export default function CartDrawer() {
 
   useEffect(() => {
     if (showAuth) {
-      setStep('input')
       setOtpError('')
+      // Already logged in → skip straight to payment, no OTP again.
+      if (useAuthStore.getState().isAuthenticated()) {
+        setStep('payment')
+        return
+      }
+      setStep('input')
       setTimeout(() => phoneInputRef.current?.focus(), 50)
     } else {
       setPhone('')
@@ -211,6 +216,14 @@ export default function CartDrawer() {
         })
       }
     } catch (e: any) {
+      // Session expired on the server → log out and ask for OTP once more.
+      if (e?.response?.status === 401) {
+        useAuthStore.getState().logout()
+        setStep('input')
+        setOtpError('Your session expired. Please log in again.')
+        setTimeout(() => phoneInputRef.current?.focus(), 50)
+        return
+      }
       // Prefer the server's reason (e.g. "Delivery is not available at this address").
       setOtpError(e?.response?.data?.message ?? e?.message ?? 'Failed to place order. Try again.')
     } finally {
@@ -277,8 +290,9 @@ export default function CartDrawer() {
         role="dialog"
         aria-label="Cart"
         aria-hidden={!isOpen}
-        className={`fixed top-0 right-0 z-[70] h-full w-full max-w-md bg-appBackground flex flex-col shadow-2xl transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed top-0 right-0 z-[70] h-full w-full max-w-md bg-appBackground flex flex-col transition-transform duration-300 ease-out ${
+          // Shadow only while open — off-screen it bleeds a grey strip onto the page edge.
+          isOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full'
         }`}
       >
         {/* Header */}
