@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { User, Phone, Mail, Edit3, Check, AlertCircle, Loader2, ShoppingBag, MapPin, LogOut, Trash2 } from 'lucide-react'
+import { User, Phone, Mail, Edit3, Check, AlertCircle, Loader2, ShoppingBag, MapPin, LogOut, Trash2, HelpCircle } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import { useLoginUi } from '@/store/loginUiStore'
@@ -225,6 +225,7 @@ export default function ProfilePage() {
         {[
           { icon: ShoppingBag, label: 'My Orders',        to: '/orders'    },
           { icon: MapPin,      label: 'Saved Addresses',  to: '/addresses' },
+          { icon: HelpCircle,  label: 'Help & Support',   to: '/support'   },
         ].map(({ icon: Icon, label, to }) => (
           <Link
             key={to}
