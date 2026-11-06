@@ -17,6 +17,7 @@ import OrdersPage from '@/features/orders/OrdersPage'
 import OrderTrackingPage from '@/features/orders/OrderTrackingPage'
 import ProfilePage from '@/features/profile/ProfilePage'
 import SupportPage from '@/features/support/SupportPage'
+import AddressesPage from '@/features/addresses/AddressesPage'
 
 export default function App() {
   return (
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/profile"         element={<ProfilePage />} />
           <Route path="/info/:slug"      element={<InfoPage />} />
           <Route path="/support"         element={<SupportPage />} />
+          <Route path="/addresses"       element={<AddressesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

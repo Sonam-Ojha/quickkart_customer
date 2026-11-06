@@ -362,7 +362,7 @@ function TicketList({ onBack, onSelect, onNew }: { onBack: () => void; onSelect:
 }
 
 // ── Root ───────────────────────────────────────────────────
-type View = 'help' | 'new' | 'list' | 'chat'
+type View = 'loading' | 'help' | 'new' | 'list' | 'chat'
 
 export default function SupportPage() {
   const token       = useAuthStore(s => s.token)
@@ -370,12 +370,22 @@ export default function SupportPage() {
   const navigate    = useNavigate()
   const [searchParams] = useSearchParams()
 
-  const [view,           setView]           = useState<View>('help')
+  const [view,           setView]           = useState<View>('loading')
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
 
   useEffect(() => {
     if (!hasHydrated) return
-    if (!token) { useLoginUi.getState().open('/support'); navigate('/home', { replace: true }) }
+    if (!token) { useLoginUi.getState().open('/support'); navigate('/home', { replace: true }); return }
+    // On open: check if user has an active (non-resolved) ticket → go straight to chat
+    supportApi.list().then(tickets => {
+      const active = tickets.find(t => t.status !== 'resolved')
+      if (active) {
+        setSelectedTicket(active)
+        setView('chat')
+      } else {
+        setView('help')
+      }
+    }).catch(() => setView('help'))
   }, [token, hasHydrated, navigate])
 
   useEffect(() => {
@@ -388,6 +398,14 @@ export default function SupportPage() {
   }
 
   if (!token) return null
+
+  if (view === 'loading') {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-muted" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-surface flex flex-col">
@@ -411,7 +429,10 @@ export default function SupportPage() {
         {view === 'chat' && selectedTicket && (
           <ChatThread
             ticket={selectedTicket}
-            onBack={() => setView('list')}
+            onBack={() => {
+              // After chat, re-check — if resolved now, go to help; else stay on list
+              setView('list')
+            }}
           />
         )}
       </div>

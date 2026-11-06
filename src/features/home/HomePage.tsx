@@ -155,7 +155,7 @@ function MainCategoryGrid({ categories, loading }: { categories: Category[]; loa
                   )}
                 </div>
                 {/* Name below — compact, two lines */}
-                <p className="font-inter text-[11px] sm:text-xs font-semibold text-ink text-center leading-tight line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
+                <p className="font-inter text-xs sm:text-sm font-semibold text-ink text-center leading-tight line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
                   {cat.name}
                 </p>
               </button>

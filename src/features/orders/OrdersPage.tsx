@@ -21,13 +21,23 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
 
-  useEffect(() => {
-    if (!hasHydrated) return
+  const fetchOrders = () => {
     if (!token) { setLoading(false); return }
+    setLoading(true)
+    setError('')
     api.get('/orders')
       .then((r) => setOrders(r.data))
-      .catch(() => setError('Failed to load orders'))
+      .catch((err) => {
+        if (err?.response?.status === 401) return // interceptor auto-logs out
+        setError(err?.response?.data?.message ?? 'Failed to load orders')
+      })
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    fetchOrders()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, hasHydrated])
 
   if (!hasHydrated || loading) return (
@@ -55,8 +65,11 @@ export default function OrdersPage() {
   )
 
   if (error) return (
-    <div className="min-h-[60vh] flex items-center justify-center text-center px-6">
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 text-center px-6">
       <p className="font-jakarta text-muted">{error}</p>
+      <button onClick={fetchOrders} className="h-9 px-5 bg-primaryOrange text-white rounded-btn font-inter font-semibold text-sm">
+        Retry
+      </button>
     </div>
   )
 

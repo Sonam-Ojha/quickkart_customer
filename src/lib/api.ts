@@ -17,6 +17,17 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Auto-logout on 401 so stale tokens don't silently fail
+api.interceptors.response.use(
+  r => r,
+  err => {
+    if (err?.response?.status === 401) {
+      import('@/store/authStore').then(({ useAuthStore }) => useAuthStore.getState().logout())
+    }
+    return Promise.reject(err)
+  },
+)
+
 // Catalogue requests carry the customer's location so the backend can pick
 // the store whose radius covers it (and hide products switched off there).
 const LOCATION_SCOPED = /^\/(products|categories)(\/|\?|$)/

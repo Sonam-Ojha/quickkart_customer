@@ -39,7 +39,20 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, token: null })
       },
 
-      isAuthenticated: () => !!get().token,
+      isAuthenticated: () => {
+        const token = get().token
+        if (!token) return false
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]))
+          if (payload.exp && Date.now() / 1000 > payload.exp) {
+            // Token expired — clear it silently
+            localStorage.removeItem('qk_token')
+            set({ user: null, token: null })
+            return false
+          }
+        } catch {}
+        return true
+      },
     }),
     {
       name: 'qk-customer-auth',
