@@ -10,10 +10,13 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Attach JWT token from localStorage on every request
+// Attach JWT token from Zustand persist store on every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('qk_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  try {
+    const raw = localStorage.getItem('qk-customer-auth')
+    const token = raw ? JSON.parse(raw)?.state?.token : null
+    if (token) config.headers.Authorization = `Bearer ${token}`
+  } catch {}
   return config
 })
 
