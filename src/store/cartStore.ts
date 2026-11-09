@@ -82,7 +82,7 @@ export const useCartStore = create<CartState>()(
         Object.values(get().items).reduce((acc, i) => acc + i.price * i.qty, 0),
 
       mrpTotal: () =>
-        Object.values(get().items).reduce((acc, i) => acc + i.originalPrice * i.qty, 0),
+        Object.values(get().items).reduce((acc, i) => acc + (i.originalPrice ?? i.price) * i.qty, 0),
 
       savings: () => get().mrpTotal() - get().subtotal(),
     }),

@@ -270,7 +270,7 @@ export default function PrintPage() {
                       {f.uploading ? (
                         <Loader2 size={16} className="animate-spin text-primaryOrange shrink-0" />
                       ) : f.error ? (
-                        <AlertCircle size={16} className="text-error shrink-0" title={f.error} />
+                        <span title={f.error}><AlertCircle size={16} className="text-error shrink-0" /></span>
                       ) : f.url ? (
                         <CheckCircle size={16} className="text-success shrink-0" />
                       ) : (

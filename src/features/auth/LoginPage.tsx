@@ -7,7 +7,8 @@ import { useAuthStore } from '@/store/authStore'
 export default function LoginPage() {
   const navigate       = useNavigate()
   const [params]       = useSearchParams()
-  const redirectTo     = params.get('redirect') ?? '/home'
+  const rawRedirect    = params.get('redirect') ?? '/home'
+  const redirectTo     = rawRedirect.startsWith('/') ? rawRedirect : '/home'
   const setAuth        = useAuthStore(s => s.setAuth)
 
   const [mobile, setMobile]   = useState('')
@@ -113,7 +114,7 @@ export default function LoginPage() {
             </>
           ) : (
             <>
-              {devOtp && (
+              {import.meta.env.DEV && devOtp && (
                 <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                   <span className="text-xl">🔑</span>
                   <div>

@@ -19,4 +19,30 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // React core — cached aggressively; changes rarely
+          if (
+            id.indexOf('node_modules/react/') !== -1 ||
+            id.indexOf('node_modules/react-dom/') !== -1 ||
+            id.indexOf('node_modules/react-router-dom/') !== -1 ||
+            id.indexOf('node_modules/scheduler/') !== -1
+          ) {
+            return 'react-vendor'
+          }
+          // TanStack Query
+          if (id.indexOf('@tanstack/') !== -1) {
+            return 'tanstack'
+          }
+          // Leaflet — large map library, only loaded on OrderTrackingPage
+          if (id.indexOf('leaflet') !== -1 || id.indexOf('react-leaflet') !== -1) {
+            return 'leaflet'
+          }
+        },
+      },
+    },
+  },
 })

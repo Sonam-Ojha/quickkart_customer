@@ -50,10 +50,12 @@ export default function CheckoutPage() {
   const [placing, setPlacing]             = useState(false)
   const [error, setError]                 = useState('')
   const [success, setSuccess]             = useState(false)
+  const [confirmedTotal, setConfirmedTotal] = useState(0)
   const [addresses, setAddresses]         = useState<Address[]>([])
   const [selectedAddr, setSelectedAddr]   = useState<number | null>(null)
   const [showAddrForm, setShowAddrForm]   = useState(false)
   const [savingAddr, setSavingAddr]       = useState(false)
+  const [addrError, setAddrError]         = useState('')
   const [newAddr, setNewAddr]             = useState({ label: 'Home', line1: '', line2: '', city: '', pincode: '' })
   const [locOpen, setLocOpen]             = useState(false)
 
@@ -63,7 +65,7 @@ export default function CheckoutPage() {
     if (!hasHydrated) return
     if (!isAuth) { navigate('/home', { replace: true }); useLoginUi.getState().open('/checkout'); return }
     if (itemList.length === 0 && !success) navigate('/cart')
-  }, [hasHydrated, isAuth, itemList.length])
+  }, [hasHydrated, isAuth, itemList.length, success, navigate])
 
   // Load Razorpay script
   useEffect(() => {
@@ -96,7 +98,7 @@ export default function CheckoutPage() {
 
   const saveNewAddress = async () => {
     if (!newAddr.line1 || !newAddr.city || !newAddr.pincode) return
-    setSavingAddr(true)
+    setSavingAddr(true); setAddrError('')
     try {
       const geo = await getBrowserLocation()
       const { data } = await api.post('/addresses', { ...newAddr, ...(geo ?? {}) })
@@ -104,8 +106,8 @@ export default function CheckoutPage() {
       setSelectedAddr(data.id)
       setShowAddrForm(false)
       setNewAddr({ label: 'Home', line1: '', line2: '', city: '', pincode: '' })
-    } catch {
-      // ignore
+    } catch (e: any) {
+      setAddrError(e?.response?.data?.message ?? 'Failed to save address. Please try again.')
     } finally {
       setSavingAddr(false)
     }
@@ -124,16 +126,17 @@ export default function CheckoutPage() {
 
   const placeOrder = async (extraPayload = {}) => {
     await api.post('/orders', {
-      items: itemList.map(i => ({ id: i.id, product_id: i.id, price: i.price, qty: i.qty })),
-      payment_method:  'cod',
-      delivery_fee:    deliveryFee,
-      handling_charge: handlingCharge,
+      items: itemList.map(i => ({ id: i.id, product_id: i.id, qty: i.qty })),
+      payment_method:  payMethod,
       address_id:      selectedAddr ?? undefined,
       ...deliveryCoords(),
       ...extraPayload,
     })
-    setSuccess(true); useActiveOrderStore.getState().refresh()
+    // Capture total BEFORE clear() zeroes the cart
+    setConfirmedTotal(grandTotal)
+    setSuccess(true)
     clear()
+    useActiveOrderStore.getState().refresh()
     setTimeout(() => navigate('/orders'), 3000)
   }
 
@@ -147,7 +150,11 @@ export default function CheckoutPage() {
   const placeOrderRazorpay = async () => {
     setPlacing(true); setError('')
     try {
-      const { data: rz } = await api.post('/payments/razorpay/create', { amount: grandTotal, ...deliveryCoords() })
+      const { data: rz } = await api.post('/payments/razorpay/create', {
+        items: itemList.map(i => ({ product_id: i.id, qty: i.qty })),
+        address_id: selectedAddr ?? undefined,
+        ...deliveryCoords(),
+      })
       const options = {
         key: rz.key, amount: rz.amount, currency: 'INR',
         name: 'Jhatpats', description: 'Order Payment',
@@ -160,12 +167,14 @@ export default function CheckoutPage() {
               razorpay_order_id:   response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature:  response.razorpay_signature,
-              items: itemList.map(i => ({ id: i.id, product_id: i.id, price: i.price, qty: i.qty })),
-              delivery_fee: deliveryFee, handling_charge: handlingCharge,
+              items: itemList.map(i => ({ id: i.id, product_id: i.id, qty: i.qty })),
               address_id: selectedAddr ?? undefined,
               ...deliveryCoords(),
             })
-            setSuccess(true); useActiveOrderStore.getState().refresh(); clear()
+            setConfirmedTotal(grandTotal)
+            setSuccess(true)
+            clear()
+            useActiveOrderStore.getState().refresh()
             setTimeout(() => navigate('/orders'), 3000)
           } catch { setError('Payment verification failed. Contact support.') }
           finally { setPlacing(false) }
@@ -201,7 +210,7 @@ export default function CheckoutPage() {
         </p>
         <div className="bg-inputFill rounded-xl px-6 py-4 mb-4">
           <p className="font-jakarta text-xs text-textSecondary">Order Total</p>
-          <p className="font-inter font-extrabold text-3xl text-ink mt-1">₹{grandTotal.toFixed(0)}</p>
+          <p className="font-inter font-extrabold text-3xl text-ink mt-1">₹{confirmedTotal.toFixed(0)}</p>
         </div>
         <p className="font-jakarta text-xs text-muted">Redirecting to your orders…</p>
       </div>
@@ -262,6 +271,9 @@ export default function CheckoutPage() {
               <p className="text-[11px] font-jakarta text-muted flex items-center gap-1">
                 📍 Your current location will be saved for map tracking
               </p>
+              {addrError && (
+                <p className="text-xs font-jakarta text-red-600 bg-red-50 px-3 py-2 rounded-lg">{addrError}</p>
+              )}
               <div className="flex gap-2">
                 <button onClick={() => setShowAddrForm(false)}
                   className="flex-1 h-9 border border-border rounded-xl font-inter font-semibold text-sm text-muted hover:bg-white transition-colors flex items-center justify-center gap-1">

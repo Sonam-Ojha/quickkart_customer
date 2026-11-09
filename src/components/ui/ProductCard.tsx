@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Plus, Minus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCartStore, isOutOfStock } from '@/store/cartStore'
@@ -15,16 +16,13 @@ const badgeConfig = {
   new:        { label: 'NEW',         bg: 'bg-deepTeal text-white'    },
 }
 
-
-
-export default function ProductCard({ product }: Props) {
+export default memo(function ProductCard({ product }: Props) {
   const navigate  = useNavigate()
-  const items     = useCartStore((s) => s.items)
+  // Select only this product's qty — prevents re-render when other products change
+  const qty       = useCartStore((s) => s.items[product.id]?.qty ?? 0)
   const add       = useCartStore((s) => s.add)
   const increment = useCartStore((s) => s.increment)
   const decrement = useCartStore((s) => s.decrement)
-
-  const qty     = items[product.id]?.qty ?? 0
   const soldOut = isOutOfStock(product)
   const disc    = product.originalPrice > product.price
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
@@ -117,4 +115,4 @@ export default function ProductCard({ product }: Props) {
       </div>
     </div>
   )
-}
+})

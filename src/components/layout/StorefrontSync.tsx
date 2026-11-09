@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useLocationStore } from '@/store/locationStore'
 import { useStorefrontStore } from '@/store/storefrontStore'
+import { useAuthStore } from '@/store/authStore'
 
 // Catalogue queries whose results depend on the customer's location.
 const LOCATION_QUERIES = new Set([
@@ -15,9 +16,11 @@ export default function StorefrontSync() {
   const check = useStorefrontStore((s) => s.check)
   const lat = useLocationStore((s) => s.current?.lat)
   const lng = useLocationStore((s) => s.current?.lng)
+  const evictIfExpired = useAuthStore((s) => s.evictIfExpired)
   const first = useRef(true)
 
   useEffect(() => {
+    evictIfExpired()
     check()
     if (first.current) { first.current = false; return }
     queryClient.invalidateQueries({
