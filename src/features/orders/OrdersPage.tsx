@@ -100,7 +100,6 @@ export default function OrdersPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-inter font-bold text-ink text-sm">Order #{order.id}</span>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-inter font-semibold ${meta.color}`}>
                       {meta.icon} {meta.label}
                     </span>

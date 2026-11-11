@@ -198,7 +198,7 @@ export default function OrderTrackingPage() {
           <ArrowLeft size={18} className="text-ink" />
         </button>
         <div className="flex-1">
-          <p className="font-inter font-bold text-ink text-lg leading-none">Order #{order.id}</p>
+          <p className="font-inter font-bold text-ink text-lg leading-none">Your Order</p>
           {eta && <p className="font-jakarta text-xs text-muted mt-0.5">Estimated: {eta}</p>}
         </div>
         {canCancel && (
@@ -337,7 +337,6 @@ export default function OrderTrackingPage() {
               const done   = i <= stepIdx
               const active = i === stepIdx
               const Icon   = step.icon
-              const tl     = order.timeline?.find((t: any) => t.status === step.key)
               return (
                 <div key={step.key} className="flex flex-col items-center gap-1.5 z-10" style={{ width: `${100 / STEPS.length}%` }}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-500
@@ -348,11 +347,6 @@ export default function OrderTrackingPage() {
                   <p className={`text-center text-[10px] font-inter font-semibold leading-tight ${done ? 'text-ink' : 'text-muted'}`}>
                     {step.label}
                   </p>
-                  {tl && (
-                    <p className="text-[9px] font-jakarta text-muted">
-                      {new Date(tl.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  )}
                 </div>
               )
             })}
@@ -424,7 +418,11 @@ export default function OrderTrackingPage() {
             <div key={item.id} className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-inputFill flex items-center justify-center shrink-0 overflow-hidden">
                 {item.product?.imageUrl
-                  ? <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                  ? <img
+                      src={item.product.imageUrl.startsWith('http') ? item.product.imageUrl : `${import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:4000' : 'https://api.jhatpats.com')}${item.product.imageUrl}`}
+                      alt={item.product.name}
+                      className="w-full h-full object-cover"
+                    />
                   : <Package size={16} className="text-muted" />
                 }
               </div>
@@ -467,7 +465,7 @@ export default function OrderTrackingPage() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
               <div>
-                <p className="font-inter font-bold text-ink text-lg">Cancel Order #{order.id}</p>
+                <p className="font-inter font-bold text-ink text-lg">Cancel Order</p>
                 <p className="font-jakarta text-xs text-muted mt-0.5">This action cannot be undone</p>
               </div>
               <button onClick={() => setShowCancel(false)} disabled={cancelling}

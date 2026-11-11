@@ -1,6 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { infoPages } from '@/data/infoPages'
+import { lazy, Suspense } from 'react'
+const ChatWidget = lazy(() => import('@/features/support/ChatWidget'))
 
 export default function InfoPage() {
   const { slug }  = useParams<{ slug: string }>()
@@ -53,6 +55,13 @@ export default function InfoPage() {
           </Link>
         </div>
       </div>
+
+      {/* Live chat widget — only on contact-us page */}
+      {slug === 'contact-us' && (
+        <Suspense fallback={null}>
+          <ChatWidget />
+        </Suspense>
+      )}
     </div>
   )
 }
