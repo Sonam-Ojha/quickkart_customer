@@ -30,17 +30,25 @@ export default function BannerCarousel({ banners, desktop }: Props) {
               key={b.id}
               onClick={b.ctaLink ? () => navigate(b.ctaLink!) : undefined}
               role={b.ctaLink ? 'button' : undefined}
-              className={`relative min-w-full rounded-card overflow-hidden flex-shrink-0 ${desktop ? 'h-56 lg:h-64' : 'h-40'} ${b.ctaLink ? 'cursor-pointer' : ''}`}
+              // Direct-image banners keep their artwork ratio so nothing is
+              // cropped: 6:1 website image, 12:5 phone image on small screens.
+              // Text banners use fixed heights.
+              className={`relative min-w-full rounded-card overflow-hidden flex-shrink-0 ${
+                hasText ? (desktop ? 'h-56 lg:h-64' : 'h-40') : b.mobileImg ? 'aspect-[12/5] sm:aspect-[6/1]' : 'aspect-[6/1]'
+              } ${b.ctaLink ? 'cursor-pointer' : ''}`}
               style={{ background: hasText ? (b.bgColor || '#1e293b') : 'transparent' }}
             >
               {/* Banner image — full cover for direct-image banners, blended for customized ones */}
-              <img
-                src={b.img}
-                alt={b.title || ''}
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => { e.currentTarget.style.display = 'none' }}
-              />
+              <picture>
+                {b.mobileImg && <source media="(max-width: 639px)" srcSet={b.mobileImg} />}
+                <img
+                  src={b.img}
+                  alt={b.title || ''}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                />
+              </picture>
               {/* Gradient overlay only when there is text to show */}
               {hasText && (
                 <div
@@ -77,8 +85,8 @@ export default function BannerCarousel({ banners, desktop }: Props) {
         })}
       </div>
 
-      {/* Dot indicators */}
-      <div className="absolute bottom-2 right-3 flex gap-1">
+      {/* Dot indicators — only useful when there is more than one slide */}
+      {banners.length > 1 && <div className="absolute bottom-2 right-3 flex gap-1">
         {banners.map((_, i) => (
           <button
             key={i}
@@ -88,7 +96,7 @@ export default function BannerCarousel({ banners, desktop }: Props) {
             }`}
           />
         ))}
-      </div>
+      </div>}
     </div>
   )
 }

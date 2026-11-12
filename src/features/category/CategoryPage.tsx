@@ -1,33 +1,11 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { SlidersHorizontal, ChevronRight, Package } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { SlidersHorizontal, Package } from 'lucide-react'
 import ProductCard from '@/components/ui/ProductCard'
+import CategoryTile, { CATEGORY_GRID } from '@/components/ui/CategoryTile'
 import Breadcrumb from '@/components/ui/Breadcrumb'
 import { useCategories, useCategoryDetail, useSubCategoryProducts } from '@/hooks/useCategories'
 import type { Product } from '@/types/product'
-
-// ── Background tints cycling for root category cards ─────────────────────────
-const TINTS = [
-  'bg-orange-50  border-orange-100',
-  'bg-green-50   border-green-100',
-  'bg-blue-50    border-blue-100',
-  'bg-purple-50  border-purple-100',
-  'bg-yellow-50  border-yellow-100',
-  'bg-pink-50    border-pink-100',
-  'bg-teal-50    border-teal-100',
-  'bg-red-50     border-red-100',
-]
-
-const ICON_BG = [
-  'bg-orange-100 text-orange-600',
-  'bg-green-100  text-green-600',
-  'bg-blue-100   text-blue-600',
-  'bg-purple-100 text-purple-600',
-  'bg-yellow-100 text-yellow-600',
-  'bg-pink-100   text-pink-600',
-  'bg-teal-100   text-teal-600',
-  'bg-red-100    text-red-600',
-]
 
 const sortOptions = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Discount']
 
@@ -53,17 +31,17 @@ function GridSkeleton({ count = 12 }: { count?: number }) {
 
 // ── Root Category Grid ────────────────────────────────────────────────────────
 function RootGrid() {
-  const navigate = useNavigate()
   const { data: allCats = [], isLoading } = useCategories()
-  const roots    = allCats.filter(c => !c.parentId)
-  const children = allCats.filter(c => c.parentId)
-  const subCount = (parentId: number) => children.filter(c => c.parentId === parentId).length
+  const roots = allCats.filter(c => !c.parentId)
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="rounded-2xl bg-slate-100 animate-pulse h-36" />
+      <div className={CATEGORY_GRID}>
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-2">
+            <div className="w-full max-w-[7rem] aspect-square rounded-2xl bg-slate-100 animate-pulse" />
+            <div className="w-14 h-3 rounded bg-slate-100 animate-pulse" />
+          </div>
         ))}
       </div>
     )
@@ -78,43 +56,8 @@ function RootGrid() {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-      {roots.map((cat, i) => {
-        const tint   = TINTS[i % TINTS.length]
-        const iconBg = ICON_BG[i % ICON_BG.length]
-        const subs   = subCount(cat.id)
-        return (
-          <button
-            key={cat.id}
-            onClick={() => navigate(`/category/${cat.id}`)}
-            className={`relative flex flex-col gap-4 p-5 rounded-2xl border ${tint} hover:shadow-md hover:-translate-y-0.5 transition-all text-left group`}
-          >
-            {/* Icon */}
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${iconBg}`}>
-              {cat.imageUrl
-                ? <img src={cat.imageUrl} alt={cat.name} className="w-10 h-10 object-cover rounded-lg" />
-                : cat.icon || '🛒'
-              }
-            </div>
-
-            {/* Text */}
-            <div className="flex-1">
-              <p className="font-inter font-bold text-ink text-base leading-snug">{cat.name}</p>
-              {subs > 0 && (
-                <p className="font-jakarta text-xs text-textSecondary mt-1">
-                  {subs} subcategor{subs === 1 ? 'y' : 'ies'}
-                </p>
-              )}
-            </div>
-
-            {/* Arrow */}
-            <ChevronRight
-              size={16}
-              className="absolute top-5 right-4 text-textSecondary opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </button>
-        )
-      })}
+    <div className={CATEGORY_GRID}>
+      {roots.map(cat => <CategoryTile key={cat.id} cat={cat} />)}
     </div>
   )
 }
@@ -151,102 +94,68 @@ function CategoryDetail({ categoryId }: { categoryId: number }) {
   const activeSub = subcategories.find(s => s.id === activeSubId)
 
   return (
-    <div>
-      {/* ── Breadcrumb ── */}
-      <Breadcrumb items={[
-        { label: 'Categories', href: '/category' },
-        { label: category?.name ?? '…', href: `/category/${categoryId}` },
-        ...(activeSub ? [{ label: activeSub.name }] : []),
-      ]} />
+    <div className="bg-white border border-border rounded-2xl">
+      {/* ── Header bar ── */}
+      <div className="flex items-center justify-between gap-4 px-4 sm:px-5 py-3 border-b border-border">
+        <div className="min-w-0">
+          <h1 className="font-inter font-bold text-ink text-base sm:text-lg leading-tight truncate">
+            {activeSub ? `Buy ${activeSub.name} Online` : (category?.name ?? 'Products')}
+          </h1>
+          {!isLoading && (
+            <p className="font-jakarta text-xs text-textSecondary mt-0.5">
+              {category?.name}{activeSub ? ' · ' : ''}{products.length} product{products.length !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <SlidersHorizontal size={15} className="text-textSecondary hidden sm:block" />
+          <select
+            value={sort}
+            onChange={e => setSort(e.target.value)}
+            className="font-jakarta text-sm text-ink border border-border rounded-btn px-3 py-2 bg-white outline-none focus:border-primaryOrange"
+          >
+            {sortOptions.map(o => <option key={o}>{o}</option>)}
+          </select>
+        </div>
+      </div>
 
-      <div className="flex gap-6 items-start">
-
+      <div className="flex items-start">
         {/* ── Sidebar: Subcategories ── */}
         {subcategories.length > 0 && (
-          <aside className="hidden lg:block w-56 shrink-0 sticky top-28">
-            <div className="bg-white rounded-2xl border border-border overflow-hidden">
-              {/* Header */}
-              <div className="px-4 py-3 bg-slate-50 border-b border-border">
-                <p className="font-inter font-bold text-ink text-sm">
-                  {category?.icon} {category?.name}
-                </p>
-              </div>
-              {/* Subcategories */}
-              <div className="p-2">
-                {subcategories.map(sub => (
-                  <button
-                    key={sub.id}
-                    onClick={() => setActiveSubId(sub.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-jakarta mb-0.5 transition-all text-left ${
-                      activeSubId === sub.id
-                        ? 'bg-orangeTint text-primaryOrange font-semibold'
-                        : 'text-textSecondary hover:bg-inputFill'
-                    }`}
-                  >
+          <aside className="w-20 sm:w-24 lg:w-28 shrink-0 self-start sticky top-20 max-h-[calc(100vh-5rem)] overflow-y-auto no-scrollbar border-r border-border">
+            {subcategories.map(sub => {
+              const active = activeSubId === sub.id
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => { setActiveSubId(sub.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  className={`relative w-full flex flex-col items-center gap-1.5 px-1.5 py-3 transition-colors ${
+                    active ? 'bg-orangeTint/40' : 'hover:bg-inputFill'
+                  }`}
+                >
+                  <span className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center overflow-hidden transition-transform ${
+                    active ? 'bg-orangeTint scale-105' : 'bg-inputFill'
+                  }`}>
                     {sub.imageUrl
-                      ? <img src={sub.imageUrl} alt={sub.name} className="w-7 h-7 rounded-lg object-cover shrink-0" />
-                      : sub.icon
-                        ? <span className="w-7 h-7 flex items-center justify-center text-base bg-slate-100 rounded-lg shrink-0">{sub.icon}</span>
-                        : <span className="w-7 h-7 rounded-lg bg-slate-100 shrink-0" />
+                      ? <img src={sub.imageUrl} alt="" className="w-full h-full object-contain p-1 mix-blend-multiply" />
+                      : <span className="text-2xl leading-none">{sub.icon || '🛒'}</span>
                     }
-                    <span className="leading-snug flex-1">{sub.name}</span>
-                    {activeSubId === sub.id && <div className="w-1.5 h-1.5 rounded-full bg-primaryOrange shrink-0" />}
-                  </button>
-                ))}
-              </div>
-            </div>
+                  </span>
+                  <span className={`text-[11px] sm:text-xs text-center leading-tight line-clamp-2 ${
+                    active ? 'font-inter font-semibold text-ink' : 'font-jakarta text-textSecondary'
+                  }`}>
+                    {sub.name}
+                  </span>
+                  {/* Active indicator bar */}
+                  <span className={`absolute right-0 top-2 bottom-2 w-1 rounded-l-full ${active ? 'bg-primaryOrange' : 'bg-transparent'}`} />
+                </button>
+              )
+            })}
           </aside>
         )}
 
-        {/* ── Main Content ── */}
-        <div className="flex-1 min-w-0">
-          {/* Header row */}
-          <div className="flex items-center justify-between mb-5 gap-4">
-            <div>
-              <h1 className="font-inter font-bold text-ink text-2xl leading-tight">
-                {activeSubId
-                  ? subcategories.find(s => s.id === activeSubId)?.name ?? 'Products'
-                  : (category?.name ?? 'Products')
-                }
-              </h1>
-              {!isLoading && (
-                <p className="font-jakarta text-sm text-textSecondary mt-0.5">
-                  {products.length} product{products.length !== 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <SlidersHorizontal size={15} className="text-textSecondary" />
-              <select
-                value={sort}
-                onChange={e => setSort(e.target.value)}
-                className="font-jakarta text-sm text-ink border border-border rounded-xl px-3 py-2 bg-white outline-none focus:border-primaryOrange"
-              >
-                {sortOptions.map(o => <option key={o}>{o}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Mobile: subcategory chips */}
-          {subcategories.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 lg:hidden mb-5">
-              {subcategories.map(sub => (
-                <button
-                  key={sub.id}
-                  onClick={() => setActiveSubId(sub.id)}
-                  className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-inter font-semibold border transition-colors ${
-                    activeSubId === sub.id
-                      ? 'bg-primaryOrange text-white border-primaryOrange'
-                      : 'border-border text-textSecondary bg-white'
-                  }`}
-                >
-                  {sub.icon} {sub.name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Products */}
+        {/* ── Products ── */}
+        <div className="flex-1 min-w-0 self-stretch bg-stone-50 p-2.5 sm:p-3 rounded-br-2xl">
           {isLoading ? (
             <GridSkeleton count={12} />
           ) : products.length === 0 ? (
@@ -256,7 +165,7 @@ function CategoryDetail({ categoryId }: { categoryId: number }) {
               <p className="font-jakarta text-sm text-muted mt-1">Check back later or try another subcategory</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
               {products.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           )}

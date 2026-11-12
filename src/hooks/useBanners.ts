@@ -12,7 +12,8 @@ export function useBanners(section?: 'hero' | 'promo') {
   return useQuery<(Banner & PromoBanner)[]>({
     queryKey: ['banners', section ?? 'all'],
     queryFn: async () => {
-      const params = section ? { section } : {}
+      // Only banners meant for the website (platform web or both)
+      const params = section ? { section, platform: 'web' } : { platform: 'web' }
       const { data } = await api.get<(Banner & PromoBanner)[]>('/banners', { params })
       return data
     },

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import CategoryTile, { ViewAllTile, CATEGORY_GRID } from '@/components/ui/CategoryTile'
 import { useQueryClient } from '@tanstack/react-query'
 import BannerCarousel from '@/components/ui/BannerCarousel'
 import ProductCard from '@/components/ui/ProductCard'
@@ -63,18 +64,6 @@ const DEFAULT_THEME = BG_THEME['orange-tint']
 const SCROLL_ROW  = "flex gap-4 overflow-x-auto pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 const SCROLL_ITEM = "shrink-0 snap-start w-[calc((100%-2rem)/2.5)] sm:w-[calc((100%-3rem)/3.5)] md:w-[calc((100%-4rem)/4.5)] lg:w-[calc((100%-5rem)/5.5)] xl:w-[calc((100%-6rem)/6.5)]"
 
-// Cycling tints for category icon-tile backgrounds
-const CAT_ICON_BG = [
-  'bg-orange-100',
-  'bg-green-100',
-  'bg-blue-100',
-  'bg-purple-100',
-  'bg-yellow-100',
-  'bg-pink-100',
-  'bg-teal-100',
-  'bg-red-100',
-]
-
 function ProductSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div className={SCROLL_ROW}>
@@ -125,12 +114,17 @@ function CategoryProductRow({ cat }: { cat: Category }) {
 }
 
 // ── Main categories grid ─────────────────────────────────────────────────────
+// Home shows at most this many tiles (two rows on desktop); beyond that the
+// last slot becomes "View all", which opens the full category list.
+const HOME_CATEGORY_LIMIT = 20
+
 function MainCategoryGrid({ categories, loading }: { categories: Category[]; loading: boolean }) {
-  const navigate = useNavigate()
-  const roots = categories.filter(c => !c.parentId)
+  const roots    = categories.filter(c => !c.parentId)
+  const overflow = roots.length > HOME_CATEGORY_LIMIT
+  const shown    = overflow ? roots.slice(0, HOME_CATEGORY_LIMIT - 1) : roots
 
   return (
-    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-x-3 gap-y-6">
+    <div className={CATEGORY_GRID}>
       {loading
         ? Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center gap-2">
@@ -138,29 +132,10 @@ function MainCategoryGrid({ categories, loading }: { categories: Category[]; loa
               <div className="w-14 h-3 rounded bg-slate-100 animate-pulse" />
             </div>
           ))
-        : roots.map((cat, i) => {
-            const iconBg = CAT_ICON_BG[i % CAT_ICON_BG.length]
-            return (
-              <button
-                key={cat.id}
-                onClick={() => navigate(`/category/${cat.id}`)}
-                className="flex flex-col items-center gap-2 group"
-              >
-                {/* Icon tile */}
-                <div className={`w-full max-w-[7rem] aspect-square rounded-2xl overflow-hidden flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:scale-[1.05] ${!cat.imageUrl ? iconBg : 'bg-slate-50'}`}>
-                  {cat.imageUrl ? (
-                    <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-4xl sm:text-5xl lg:text-6xl leading-none select-none">{cat.icon || '🛒'}</span>
-                  )}
-                </div>
-                {/* Name below — compact, two lines */}
-                <p className="font-inter text-xs sm:text-sm font-semibold text-ink text-center leading-tight line-clamp-2 w-full group-hover:text-primaryOrange transition-colors">
-                  {cat.name}
-                </p>
-              </button>
-            )
-          })
+        : <>
+            {shown.map(cat => <CategoryTile key={cat.id} cat={cat} />)}
+            {overflow && <ViewAllTile hidden={roots.slice(shown.length)} />}
+          </>
       }
     </div>
   )

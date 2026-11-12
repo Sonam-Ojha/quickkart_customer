@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   MapPin, Navigation, Search, X, Clock, ChevronRight,
-  Loader2, AlertCircle, CheckCircle2, RotateCcw,
+  Loader2, AlertCircle, CheckCircle2, RotateCcw, Home, Briefcase,
 } from 'lucide-react'
 import { useLocationStore, SavedLocation } from '@/store/locationStore'
+import { useAuthStore } from '@/store/authStore'
+import api from '@/lib/api'
 import AddressDetailsForm from './AddressDetailsForm'
 import { useGeoLocation } from '@/hooks/useGeoLocation'
 
@@ -81,11 +83,27 @@ function toSavedLocation(
   }
 }
 
+// Address saved on the account — shared by the website and the app
+interface AccountAddress {
+  id: number; label: string; line1: string; line2?: string | null
+  city: string; pincode: string; lat?: number | string | null; lng?: number | string | null
+  isDefault?: boolean
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 interface Props { open: boolean; onClose: () => void }
 
 export default function LocationModal({ open, onClose }: Props) {
   const { current, recents, setLocation } = useLocationStore()
+  const token = useAuthStore((s) => s.token)
+  // Logged-in users see the addresses saved on their account (from web or app)
+  const [saved, setSaved] = useState<AccountAddress[]>([])
+  useEffect(() => {
+    if (!open || !token) { setSaved([]); return }
+    api.get<AccountAddress[]>('/addresses')
+      .then(({ data }) => setSaved(Array.isArray(data) ? data : []))
+      .catch(() => setSaved([]))
+  }, [open, token])
   const { status: gpsStatus, request: requestGps, reset: resetGps } = useGeoLocation()
 
   const [query,        setQuery]       = useState('')
@@ -208,6 +226,22 @@ export default function LocationModal({ open, onClose }: Props) {
 
   const handleRecentSelect = (loc: SavedLocation) => {
     setLocation({ ...loc, capturedAt: Date.now() })
+    onClose()
+  }
+
+  const handleSavedSelect = (a: AccountAddress) => {
+    const lat = a.lat != null ? Number(a.lat) : undefined
+    const lng = a.lng != null ? Number(a.lng) : undefined
+    setLocation({
+      label:   a.label || 'Home',
+      area:    [a.line1, a.city].filter(Boolean).join(', '),
+      pincode: a.pincode || '',
+      city:    a.city,
+      lat:     Number.isFinite(lat) ? lat : undefined,
+      lng:     Number.isFinite(lng) ? lng : undefined,
+      formattedAddress: [a.line1, a.line2].filter(Boolean).join(', '),
+      capturedAt: Date.now(),
+    })
     onClose()
   }
 
@@ -393,6 +427,31 @@ export default function LocationModal({ open, onClose }: Props) {
               <MapPin size={28} className="text-border mx-auto mb-2" />
               <p className="font-jakarta text-sm text-muted">No results for "{query}"</p>
               <p className="font-jakarta text-xs text-muted/70 mt-1">Try a different area or pincode</p>
+            </div>
+          )}
+
+          {/* Saved addresses on the account */}
+          {query.trim().length === 0 && saved.length > 0 && !showConfirmCard && (
+            <div className="space-y-0.5 mb-3">
+              <p className="font-inter font-semibold text-xs text-muted px-1 pb-1">SAVED ADDRESSES</p>
+              {saved.map(a => {
+                const Icon = /work|office/i.test(a.label) ? Briefcase : /home/i.test(a.label) ? Home : MapPin
+                return (
+                  <button key={a.id} onClick={() => handleSavedSelect(a)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-inputFill transition-colors text-left group">
+                    <div className="w-8 h-8 rounded-lg bg-orangeTint flex items-center justify-center shrink-0">
+                      <Icon size={15} className="text-primaryOrange" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-inter font-semibold text-ink text-sm truncate">{a.label || 'Home'}</p>
+                      <p className="font-jakarta text-xs text-muted truncate">
+                        {[a.line1, a.line2, a.city].filter(Boolean).join(', ')}{a.pincode ? ` · ${a.pincode}` : ''}
+                      </p>
+                    </div>
+                    <ChevronRight size={14} className="text-muted shrink-0 group-hover:text-primaryOrange transition-colors" />
+                  </button>
+                )
+              })}
             </div>
           )}
 

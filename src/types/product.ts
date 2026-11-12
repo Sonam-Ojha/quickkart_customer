@@ -27,6 +27,8 @@ export interface Banner {
   title: string
   subtitle?: string
   img: string
+  /** Phone-shaped (12:5) artwork for small screens, if the admin added one */
+  mobileImg?: string | null
   ctaText?: string
   ctaLink?: string
   bgColor?: string
