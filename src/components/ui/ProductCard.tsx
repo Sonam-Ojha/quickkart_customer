@@ -58,7 +58,7 @@ export default memo(function ProductCard({ product }: Props) {
       </div>
 
       {/* Content */}
-      <div className="flex flex-col gap-1.5 p-3 flex-1">
+      <div className="flex flex-col gap-1.5 p-2.5 sm:p-3 flex-1">
 
         {/* Weight */}
         <span className="text-muted text-2xs font-jakarta">{product.weight}</span>
@@ -71,8 +71,8 @@ export default memo(function ProductCard({ product }: Props) {
           {product.name}
         </p>
 
-        {/* Price row + ADD button */}
-        <div className="flex items-center justify-between gap-1 mt-0.5">
+        {/* Price row + ADD button — wraps the button below the price on very narrow cards */}
+        <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-1.5 mt-0.5">
           <div className="flex flex-col">
             <span className="font-inter font-bold text-ink text-base leading-none">₹{product.price}</span>
             {disc > 0 && (
@@ -83,29 +83,29 @@ export default memo(function ProductCard({ product }: Props) {
           {soldOut ? (
             <button
               disabled
-              className="h-9 px-3 bg-slate-100 border border-slate-200 text-slate-400 rounded-btn font-inter font-bold text-xs uppercase tracking-wide cursor-not-allowed shrink-0"
+              className="ml-auto h-9 px-3 bg-slate-100 border border-slate-200 text-slate-400 rounded-btn font-inter font-bold text-xs uppercase tracking-wide cursor-not-allowed shrink-0"
             >
               Notify
             </button>
           ) : qty === 0 ? (
             <button
               onClick={() => add(product)}
-              className="h-9 px-4 bg-cardSurface border border-primaryOrange text-primaryOrange hover:bg-orangeTint rounded-btn font-inter font-bold text-xs uppercase tracking-wide transition-colors shrink-0"
+              className="ml-auto h-9 px-3 sm:px-4 bg-cardSurface border border-primaryOrange text-primaryOrange hover:bg-orangeTint rounded-btn font-inter font-bold text-xs uppercase tracking-wide transition-colors shrink-0"
             >
               ADD
             </button>
           ) : (
-            <div className="flex items-center bg-primaryOrange rounded-btn h-9 shrink-0">
+            <div className="ml-auto flex items-center bg-primaryOrange rounded-btn h-9 shrink-0">
               <button
                 onClick={() => decrement(product.id)}
-                className="w-8 h-9 flex items-center justify-center text-white hover:bg-orangeDark rounded-l-btn transition-colors"
+                className="w-7 sm:w-8 h-9 flex items-center justify-center text-white hover:bg-orangeDark rounded-l-btn transition-colors"
               >
                 <Minus size={13} strokeWidth={3} />
               </button>
-              <span className="font-inter font-bold text-white text-sm w-6 text-center">{qty}</span>
+              <span className="font-inter font-bold text-white text-sm w-5 sm:w-6 text-center">{qty}</span>
               <button
                 onClick={() => increment(product.id)}
-                className="w-8 h-9 flex items-center justify-center text-white hover:bg-orangeDark rounded-r-btn transition-colors"
+                className="w-7 sm:w-8 h-9 flex items-center justify-center text-white hover:bg-orangeDark rounded-r-btn transition-colors"
               >
                 <Plus size={13} strokeWidth={3} />
               </button>

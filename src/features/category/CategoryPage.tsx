@@ -94,11 +94,11 @@ function CategoryDetail({ categoryId }: { categoryId: number }) {
   const activeSub = subcategories.find(s => s.id === activeSubId)
 
   return (
-    <div className="bg-white border border-border rounded-2xl">
+    <div className="bg-white border-y sm:border border-border sm:rounded-2xl">
       {/* ── Header bar ── */}
-      <div className="flex items-center justify-between gap-4 px-4 sm:px-5 py-3 border-b border-border">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-border">
         <div className="min-w-0">
-          <h1 className="font-inter font-bold text-ink text-base sm:text-lg leading-tight truncate">
+          <h1 className="font-inter font-bold text-ink text-base sm:text-lg leading-tight line-clamp-2 sm:truncate">
             {activeSub ? `Buy ${activeSub.name} Online` : (category?.name ?? 'Products')}
           </h1>
           {!isLoading && (
@@ -112,7 +112,7 @@ function CategoryDetail({ categoryId }: { categoryId: number }) {
           <select
             value={sort}
             onChange={e => setSort(e.target.value)}
-            className="font-jakarta text-sm text-ink border border-border rounded-btn px-3 py-2 bg-white outline-none focus:border-primaryOrange"
+            className="font-jakarta text-xs sm:text-sm text-ink border border-border rounded-btn px-2 sm:px-3 py-2 max-w-[7.5rem] sm:max-w-none bg-white outline-none focus:border-primaryOrange"
           >
             {sortOptions.map(o => <option key={o}>{o}</option>)}
           </select>
@@ -122,18 +122,18 @@ function CategoryDetail({ categoryId }: { categoryId: number }) {
       <div className="flex items-start">
         {/* ── Sidebar: Subcategories ── */}
         {subcategories.length > 0 && (
-          <aside className="w-20 sm:w-24 lg:w-28 shrink-0 self-start sticky top-20 max-h-[calc(100vh-5rem)] overflow-y-auto no-scrollbar border-r border-border">
+          <aside className="w-16 sm:w-24 lg:w-28 shrink-0 self-start sticky top-20 max-h-[calc(100vh-5rem)] overflow-y-auto no-scrollbar border-r border-border">
             {subcategories.map(sub => {
               const active = activeSubId === sub.id
               return (
                 <button
                   key={sub.id}
                   onClick={() => { setActiveSubId(sub.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                  className={`relative w-full flex flex-col items-center gap-1.5 px-1.5 py-3 transition-colors ${
+                  className={`relative w-full flex flex-col items-center gap-1.5 px-1 sm:px-1.5 py-3 transition-colors ${
                     active ? 'bg-orangeTint/40' : 'hover:bg-inputFill'
                   }`}
                 >
-                  <span className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center overflow-hidden transition-transform ${
+                  <span className={`w-11 h-11 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center overflow-hidden transition-transform ${
                     active ? 'bg-orangeTint scale-105' : 'bg-inputFill'
                   }`}>
                     {sub.imageUrl
@@ -155,7 +155,7 @@ function CategoryDetail({ categoryId }: { categoryId: number }) {
         )}
 
         {/* ── Products ── */}
-        <div className="flex-1 min-w-0 self-stretch bg-stone-50 p-2.5 sm:p-3 rounded-br-2xl">
+        <div className="flex-1 min-w-0 self-stretch bg-stone-50 p-2 sm:p-3 sm:rounded-br-2xl">
           {isLoading ? (
             <GridSkeleton count={12} />
           ) : products.length === 0 ? (
@@ -165,7 +165,7 @@ function CategoryDetail({ categoryId }: { categoryId: number }) {
               <p className="font-jakarta text-sm text-muted mt-1">Check back later or try another subcategory</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
               {products.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
@@ -181,7 +181,7 @@ export default function CategoryPage() {
   const categoryId = id ? Number(id) : null
 
   return (
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className={`max-w-screen-xl mx-auto sm:px-6 lg:px-8 ${categoryId ? 'py-3 sm:py-8' : 'px-4 py-8'}`}>
       {categoryId ? (
         <CategoryDetail categoryId={categoryId} />
       ) : (
