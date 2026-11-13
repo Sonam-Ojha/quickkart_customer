@@ -41,7 +41,14 @@ function ClosedScreen({ message, reopensAt, nextShiftName }: { message?: string;
             <p className="font-inter text-xs font-semibold text-orange-400 uppercase tracking-wide">
               {nextShiftName ? `${nextShiftName} shift opens at` : 'Opens at'}
             </p>
-            <p className="font-inter font-bold text-orange-600 text-lg leading-tight">{reopensAt}</p>
+            <p className="font-inter font-bold text-orange-600 text-lg leading-tight">
+              {(() => {
+                try {
+                  const d = new Date(reopensAt);
+                  return isNaN(d.getTime()) ? reopensAt : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                } catch { return reopensAt; }
+              })()}
+            </p>
           </div>
         </div>
       )}
