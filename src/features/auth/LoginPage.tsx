@@ -114,7 +114,7 @@ export default function LoginPage() {
             </>
           ) : (
             <>
-              {import.meta.env.DEV && devOtp && (
+              {devOtp && (
                 <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                   <span className="text-xl">🔑</span>
                   <div>
