@@ -169,7 +169,7 @@ export default function CartDrawer() {
 
       } else {
         // Razorpay — create order → open checkout → verify
-        const { data: rzpData } = await api.post('/payments/razorpay/create', { amount: grandTotal, ...coords })
+        const { data: rzpData } = await api.post('/payments/razorpay/create', { items: orderItems, amount: grandTotal, ...coords })
 
         // Load Razorpay script if not already loaded
         if (!(window as any).Razorpay) {
