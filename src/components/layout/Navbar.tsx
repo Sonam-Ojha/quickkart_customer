@@ -8,6 +8,8 @@ import { useAuthStore } from '@/store/authStore'
 import { useLocationStore, getLocation } from '@/store/locationStore'
 import { useIsUnavailable } from '@/store/storefrontStore'
 import LocationModal from '@/components/location/LocationModal'
+import FestivalStrip from '@/features/festival/FestivalStrip'
+import { useFestivalTheme } from '@/features/festival/useFestivalTheme'
 
 
 export default function Navbar() {
@@ -27,6 +29,7 @@ export default function Navbar() {
   const [focused, setFocused]     = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const inputRef  = useRef<HTMLInputElement>(null)
+  const festival  = useFestivalTheme()
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,6 +55,7 @@ export default function Navbar() {
     <>
     <LocationModal open={locOpen} onClose={() => setLocOpen(false)} />
     <header className="sticky top-0 z-50 bg-white">
+      <FestivalStrip />
 
       {/* ── Main navbar ── */}
       <div className="bg-white border-b border-border">
@@ -127,7 +131,7 @@ export default function Navbar() {
                 onChange={(e) => setQ(e.target.value)}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
-                placeholder='Search "milk", "eggs", "atta", "chips"...'
+                placeholder={festival?.searchPlaceholder ?? 'Search "milk", "eggs", "atta", "chips"...'}
                 className="flex-1 min-w-0 bg-transparent font-jakarta text-sm text-ink placeholder:text-muted outline-none border-none"
               />
               {q && (

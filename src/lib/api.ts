@@ -33,7 +33,7 @@ api.interceptors.response.use(
 
 // Catalogue requests carry the customer's location so the backend can pick
 // the store whose radius covers it (and hide products switched off there).
-const LOCATION_SCOPED = /^\/(products|categories)(\/|\?|$)/
+const LOCATION_SCOPED = /^\/(products|categories|theme)(\/|\?|$)/
 
 api.interceptors.request.use((config) => {
   const loc = useLocationStore.getState().current

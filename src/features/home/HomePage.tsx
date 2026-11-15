@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import CategoryTile, { ViewAllTile, CATEGORY_GRID } from '@/components/ui/CategoryTile'
 import { useQueryClient } from '@tanstack/react-query'
 import BannerCarousel from '@/components/ui/BannerCarousel'
+import FestivalSection from '@/features/festival/FestivalSection'
 import ProductCard from '@/components/ui/ProductCard'
 import CountdownTimer from '@/components/ui/CountdownTimer'
 import PromoTile, { type PromoTileData } from '@/components/ui/PromoTile'
@@ -212,6 +213,9 @@ export default function HomePage() {
   return (
     <div>
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-20 2xl:px-28 py-6 space-y-10">
+
+        {/* ── Festival picks (live festival theme only) ── */}
+        <FestivalSection rowClass={SCROLL_ROW} itemClass={SCROLL_ITEM} />
 
         {/* ── Hero carousel ── */}
         {/* Horizontal inset matches the visual gap the category icons sit in
