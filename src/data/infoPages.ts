@@ -234,28 +234,60 @@ export const infoPages: Record<string, InfoPage> = {
 
   'privacy-policy': {
     title: 'Privacy Policy',
-    subtitle: 'Last updated: June 2026',
+    subtitle: 'Last updated: 16 November 2026',
     emoji: '🔒',
     sections: [
       {
-        heading: '1. Information We Collect',
-        body: 'We collect information you provide directly: name, phone number, email, delivery address, and payment information. We also collect usage data such as pages visited, products searched, and orders placed to improve your experience.',
+        heading: '1. Who We Are',
+        body: 'Jhatpats is a quick-commerce service that delivers groceries, daily essentials, restaurant food and print jobs. This policy explains what we collect and why, and applies to the Jhatpats website (jhatpats.com) and the Jhatpats Android app.\n\nFor any privacy question, write to info@jhatpats.com or call 8840981098.\nAddress: Faridabad, Haryana, India.',
       },
       {
-        heading: '2. How We Use Your Information',
-        body: 'We use your information to: process and deliver orders, send order updates via SMS/email, personalize product recommendations, prevent fraud, comply with legal obligations, and improve our services.',
+        heading: '2. Information You Give Us',
+        body: 'Account: your mobile number (used to sign in with an OTP), and your name and email address if you add them.\n\nDelivery: the addresses you save — house/flat details, area, city, PIN code and the contact number for that address.\n\nOrders: what you add to your cart, the orders you place, coupons used, and any notes you add for the rider.\n\nSupport: messages, photos and order details you send us through in-app support or chat.',
       },
       {
-        heading: '3. Data Sharing',
-        body: 'We do not sell your personal data. We share data with delivery partners (for order fulfillment), payment processors (for transactions), and analytics providers under strict confidentiality agreements. We may disclose information if required by law.',
+        heading: '3. Location',
+        body: 'With your permission, the app uses your device\'s precise location to find the Jhatpats store nearest to you, show whether we deliver to your area, estimate the delivery time, and pre-fill your address while you are adding one.\n\nYou can skip this and type your address instead. Location permission can be turned off at any time in your phone settings; the app still works, but you will need to set your delivery area by hand.\n\nWe do not track your location in the background when the app is closed.',
       },
       {
-        heading: '4. Data Security',
-        body: 'We use industry-standard encryption (TLS/SSL) for all data in transit. Payment data is processed by PCI-DSS compliant partners and never stored on our servers. We conduct regular security audits.',
+        heading: '4. Device & Notification Data',
+        body: 'When you allow notifications, we store a push-notification token for your device so we can tell you when an order is confirmed, picked up or delivered, and about offers you have opted into. We also record basic device and app information (app version, device model, operating system) to fix crashes and problems.\n\nYou can turn off notifications in your phone settings at any time.',
       },
       {
-        heading: '5. Your Rights',
-        body: 'You have the right to access, correct, or delete your personal data at any time. To exercise these rights, email us at privacy@jhatpats.in. We will respond within 30 days as per IT Act 2000 and DPDP Act 2023.',
+        heading: '5. Payments',
+        body: 'Online payments are handled by our payment partner, Razorpay. Your card, UPI or netbanking details are entered on their secure, PCI-DSS compliant systems — they never reach or get stored on Jhatpats servers. We only keep the payment result (success or failure), the amount, and a reference number for your order and any refund.\n\nFor Cash on Delivery orders, no payment details are collected at all.',
+      },
+      {
+        heading: '6. How We Use Your Information',
+        body: 'We use your information to:\n• accept, pack, deliver and invoice your orders;\n• let the delivery rider reach you and call you if needed;\n• send order updates by notification and SMS;\n• process payments, refunds and wallet balance;\n• answer your support requests;\n• show products available in your area and improve what we stock;\n• detect and prevent fraud and misuse;\n• meet our legal and tax obligations.',
+      },
+      {
+        heading: '7. Who We Share It With',
+        body: 'We do not sell your personal data. We share only what is needed, with:\n• Delivery riders — your name, delivery address and phone number, so your order reaches you;\n• Restaurant partners (for food orders) — your name, phone number and address, so the order can be prepared and handed over;\n• Razorpay — to process payments and refunds;\n• Google (Firebase and Maps) — for push notifications, crash reporting and map/address services;\n• Our SMS provider — to send OTP and order messages;\n• Government authorities or courts — only when the law requires it.',
+      },
+      {
+        heading: '8. How Long We Keep It',
+        body: 'We keep your account information for as long as your account is open. Order and payment records are kept for up to 8 years because tax and accounting law requires it. Support conversations are kept for up to 2 years. OTPs are deleted within minutes of use or expiry.',
+      },
+      {
+        heading: '9. Deleting Your Account',
+        body: 'You can delete your Jhatpats account and personal data at any time:\n• In the app: open Profile and tap "Delete Account" at the bottom; or\n• Email info@jhatpats.com from your registered email, or call 8840981098.\n\nWe action deletion requests within 30 days. Your profile, saved addresses, cart and wishlist are removed. Past order and payment records are kept only where tax law requires, and are no longer linked to a usable account.',
+      },
+      {
+        heading: '10. Security',
+        body: 'All traffic between your device and our servers uses TLS/SSL encryption. Passwords are stored hashed, never in plain text, and sign-in is protected by one-time passwords. Access to customer data inside Jhatpats is limited to staff who need it to run orders and support.\n\nNo system is perfectly secure, so please keep your OTP private — Jhatpats staff will never ask you for it.',
+      },
+      {
+        heading: '11. Children',
+        body: 'Jhatpats is meant for people aged 18 and above. We do not knowingly collect data from children. If you believe a child has given us personal information, write to info@jhatpats.com and we will delete it.',
+      },
+      {
+        heading: '12. Your Rights',
+        body: 'Under the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023, you can ask us to show you the data we hold about you, correct anything that is wrong, delete your data, or withdraw a permission you gave earlier.\n\nWrite to info@jhatpats.com and we will respond within 30 days.',
+      },
+      {
+        heading: '13. Changes to This Policy',
+        body: 'If we change this policy we will update the date at the top of this page, and tell you in the app or by notification when the change is significant.',
       },
     ],
   },
@@ -275,15 +307,35 @@ export const infoPages: Record<string, InfoPage> = {
       },
       {
         heading: '3. Orders & Payments',
-        body: 'All prices are in Indian Rupees (₹) and inclusive of applicable taxes. We reserve the right to cancel orders in cases of pricing errors, stock unavailability, or suspected fraud. Refunds for cancelled orders are processed within 5 business days.',
+        body: 'All prices are in Indian Rupees (₹) and include applicable taxes. Delivery, handling and other charges are shown on the checkout screen before you pay.\n\nYou can pay online or by cash on delivery. An order is confirmed only once we accept it. We may cancel an order in case of a pricing error, an item going out of stock, an address we cannot deliver to, or suspected fraud — and any amount already paid is refunded in full.',
       },
       {
-        heading: '4. Limitation of Liability',
-        body: 'Jhatpats\'s liability is limited to the value of the order placed. We are not liable for indirect, incidental, or consequential damages. We do not guarantee uninterrupted service availability.',
+        heading: '4. Delivery',
+        body: 'Delivery times shown in the app are estimates, not guarantees, and can change with weather, traffic, demand or the stock at the store serving you. We deliver only inside the areas shown as serviceable in the app.\n\nPlease make sure someone is available at the address to receive the order. If we cannot reach you or nobody collects the order, we may cancel it after attempting to contact you.',
       },
       {
-        heading: '5. Governing Law',
-        body: 'These terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of courts in Noida, Uttar Pradesh.',
+        heading: '5. Cancellations, Returns & Refunds',
+        body: 'You can cancel an order from the app before it is packed. Once a rider has picked it up, cancellation may not be possible.\n\nIf an item arrives damaged, spoiled, expired or wrong, report it from the app or call 8840981098 within 24 hours of delivery and we will replace it or refund it. Fresh produce, dairy and prepared food cannot be returned once accepted, unless there is a quality issue.\n\nApproved refunds go back to your Jhatpats wallet instantly, or to the original payment method within 5–7 working days.',
+      },
+      {
+        heading: '6. Restaurant & Print Orders',
+        body: 'Food is prepared by the partner restaurant shown on the order. Packaging, taste, portion and preparation are the restaurant\'s responsibility; Jhatpats delivers it and helps resolve problems. Restaurants may refuse or cancel an order when they are closed or an item is unavailable, and you are refunded in full.\n\nFor print orders, you are responsible for the content of the files you upload and for having the right to print them. Files are deleted after your order is completed.',
+      },
+      {
+        heading: '7. Acceptable Use',
+        body: 'Do not misuse the service — no fake orders, no abuse or threats towards our staff or riders, no attempt to break into or disrupt our systems, and no reselling of what you buy from us. We may suspend an account that does any of this.',
+      },
+      {
+        heading: '8. Limitation of Liability',
+        body: 'Jhatpats\'s liability for any order is limited to the value of that order. We are not liable for indirect or consequential losses. We do not guarantee that the service will always be available without interruption.',
+      },
+      {
+        heading: '9. Governing Law',
+        body: 'These terms are governed by the laws of India. Any dispute is subject to the exclusive jurisdiction of the courts at Faridabad, Haryana.',
+      },
+      {
+        heading: '10. Contact Us',
+        body: 'Jhatpats\nFaridabad, Haryana, India\nEmail: info@jhatpats.com\nPhone: 8840981098',
       },
     ],
   },
